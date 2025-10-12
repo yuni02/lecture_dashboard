@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastCampus 수강 현황 대시보드</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header>
+            <h1>🎓 FastCampus 수강 현황</h1>
+            <p class="subtitle">내 강의 진도 및 학습 통계</p>
+        </header>
+
+        <!-- 전체 통계 카드 -->
+        <section class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-icon">📚</div>
+                <div class="stat-content">
+                    <h3 id="total-courses">-</h3>
+                    <p>수강중인 강의</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <h3 id="avg-progress">-%</h3>
+                    <p>평균 진도율</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-content">
+                    <h3 id="total-study-time">-</h3>
+                    <p>총 수강시간</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-content">
+                    <h3 id="remaining-time">-</h3>
+                    <p>남은 학습시간</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 완료 예상 시간 -->
+        <section class="completion-estimate">
+            <h2>📅 학습 완료 예상</h2>
+            <div class="estimate-grid">
+                <div class="estimate-item">
+                    <span class="estimate-label">하루 1시간</span>
+                    <span class="estimate-value" id="days-1h">-일</span>
+                </div>
+                <div class="estimate-item">
+                    <span class="estimate-label">하루 2시간</span>
+                    <span class="estimate-value" id="days-2h">-일</span>
+                </div>
+                <div class="estimate-item highlight">
+                    <span class="estimate-label">하루 3시간</span>
+                    <span class="estimate-value" id="days-3h">-일</span>
+                </div>
+                <div class="estimate-item">
+                    <span class="estimate-label">하루 5시간</span>
+                    <span class="estimate-value" id="days-5h">-일</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 강의 목록 -->
+        <section class="courses-section">
+            <h2>📖 강의 목록</h2>
+            <div class="courses-grid" id="courses-container">
+                <!-- JavaScript로 동적 생성 -->
+            </div>
+        </section>
+
+        <!-- 모달 (강의 상세) -->
+        <div id="course-modal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <h2 id="modal-title">강의 제목</h2>
+                <div class="modal-stats">
+                    <div class="modal-stat">
+                        <strong>진도율:</strong> <span id="modal-progress">-</span>%
+                    </div>
+                    <div class="modal-stat">
+                        <strong>수강시간:</strong> <span id="modal-study-time">-</span>
+                    </div>
+                    <div class="modal-stat">
+                        <strong>전체시간:</strong> <span id="modal-total-time">-</span>
+                    </div>
+                </div>
+                <div id="modal-lectures" class="lectures-list">
+                    <!-- JavaScript로 동적 생성 -->
+                </div>
+                <div class="modal-footer">
+                    <a id="modal-link" href="#" target="_blank" class="btn-primary">강의 페이지 열기</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 푸터 -->
+        <footer>
+            <p>데이터 업데이트: <span id="last-update">-</span></p>
+            <p>Made with FastAPI + Vanilla JS</p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
