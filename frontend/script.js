@@ -51,13 +51,13 @@ function updateStatCards(summary) {
 // 완료 예상 업데이트
 function updateCompletionEstimate(completion) {
     document.getElementById('days-1h').textContent =
-        completion.days_1h_per_day ? `${completion.days_1h_per_day}일` : '-';
+        completion.days_1h_per_day ? formatDaysToYearMonthDay(completion.days_1h_per_day) : '-';
     document.getElementById('days-2h').textContent =
-        completion.days_2h_per_day ? `${completion.days_2h_per_day}일` : '-';
+        completion.days_2h_per_day ? formatDaysToYearMonthDay(completion.days_2h_per_day) : '-';
     document.getElementById('days-3h').textContent =
-        completion.days_3h_per_day ? `${completion.days_3h_per_day}일` : '-';
+        completion.days_3h_per_day ? formatDaysToYearMonthDay(completion.days_3h_per_day) : '-';
     document.getElementById('days-5h').textContent =
-        completion.days_5h_per_day ? `${completion.days_5h_per_day}일` : '-';
+        completion.days_5h_per_day ? formatDaysToYearMonthDay(completion.days_5h_per_day) : '-';
 }
 
 // 강의 목록 렌더링
@@ -222,6 +222,27 @@ function setupModal() {
             modal.style.display = 'none';
         }
     };
+}
+
+// 일수를 년/개월/일수로 변환
+function formatDaysToYearMonthDay(totalDays) {
+    if (!totalDays || totalDays === 0) return '0일';
+
+    if (totalDays < 365) {
+        return `${totalDays}일`;
+    }
+
+    const years = Math.floor(totalDays / 365);
+    const remainingDays = totalDays % 365;
+    const months = Math.floor(remainingDays / 30);
+    const days = remainingDays % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years}년`);
+    if (months > 0) parts.push(`${months}개월`);
+    if (days > 0) parts.push(`${days}일`);
+
+    return parts.join(' ') || '0일';
 }
 
 // 분을 시간 형식으로 변환

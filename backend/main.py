@@ -8,28 +8,8 @@ from fastapi.responses import FileResponse
 import pymysql
 from typing import List, Dict, Any
 import os
-import sys
 from datetime import datetime
-
-# credentials.py 로드
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-credentials_path = os.path.join(project_root, 'credentials.py')
-
-MYSQL_HOST = 'localhost'
-MYSQL_PORT = 3306
-MYSQL_USER = 'root'
-MYSQL_PASSWORD = ''
-MYSQL_DATABASE = 'crawler'
-
-if os.path.exists(credentials_path):
-    with open(credentials_path, 'r', encoding='utf-8') as f:
-        exec_globals = {}
-        exec(f.read(), exec_globals)
-        MYSQL_HOST = exec_globals.get('MYSQL_HOST', MYSQL_HOST)
-        MYSQL_PORT = exec_globals.get('MYSQL_PORT', MYSQL_PORT)
-        MYSQL_USER = exec_globals.get('MYSQL_USER', MYSQL_USER)
-        MYSQL_PASSWORD = exec_globals.get('MYSQL_PASSWORD', MYSQL_PASSWORD)
-        MYSQL_DATABASE = exec_globals.get('MYSQL_DATABASE', MYSQL_DATABASE)
+from config import config
 
 app = FastAPI(title="FastCampus Dashboard API")
 
@@ -45,11 +25,11 @@ app.add_middleware(
 def get_db_connection():
     """MySQL 데이터베이스 연결"""
     return pymysql.connect(
-        host=MYSQL_HOST,
-        port=MYSQL_PORT,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        database=MYSQL_DATABASE,
+        host=config.mysql_host,
+        port=config.mysql_port,
+        user=config.mysql_user,
+        password=config.mysql_password,
+        database=config.mysql_database,
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )

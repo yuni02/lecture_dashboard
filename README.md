@@ -32,25 +32,60 @@ cd /Users/jennie/PycharmProjects/fastcampus-scrapping/web_dashboard/backend
 pip install -r requirements.txt
 ```
 
-### 2. 데이터베이스 확인
+### 2. 환경 설정
 
 - MySQL 서버가 실행 중인지 확인
-- `credentials.py`에 MySQL 연결 정보가 올바른지 확인
+- `.env.local` 또는 `.env.dev` 파일에 MySQL 연결 정보 설정
 - `courses`, `lectures` 테이블에 데이터가 있는지 확인
+
+#### 환경 설정 파일
+
+프로젝트는 환경별 설정 파일을 사용합니다:
+
+- `.env.example` - 설정 템플릿 (참고용)
+- `.env.local` - 로컬 개발 환경 설정
+- `.env.dev` - 개발 서버 환경 설정
+
+`.env.local` 파일을 생성하고 로컬 DB 정보를 입력하세요:
+
+```bash
+# .env.local
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=crawler
+ENVIRONMENT=local
+```
 
 ## 실행 방법
 
 ### 서버 시작
 
+#### 로컬 환경에서 실행 (기본값)
+
 ```bash
-cd /Users/jennie/PycharmProjects/fastcampus-scrapping/web_dashboard/backend
-python main.py
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-또는 uvicorn 직접 실행:
+기본적으로 `.env.local` 파일을 사용합니다.
+
+#### 개발 서버 환경에서 실행
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd backend
+ENVIRONMENT=dev uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+`.env.dev` 파일을 사용합니다.
+
+#### Python으로 직접 실행
+
+```bash
+cd backend
+python main.py  # 로컬 환경
+ENVIRONMENT=dev python main.py  # 개발 환경
 ```
 
 ### 접속
