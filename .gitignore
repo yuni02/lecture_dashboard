@@ -32,6 +32,9 @@ wheels/
 !.env.example
 credentials.py
 
+# Server configuration (contains sensitive info)
+server-config.sh
+
 # OS
 .DS_Store
 Thumbs.db
