@@ -78,6 +78,7 @@ ssh -p $SERVER_PORT $SERVER_USER@$SERVER_HOST << 'ENDSSH'
     docker compose up -d --build
   fi
 
+
   # 컨테이너 상태 확인
   echo ""
   echo "📊 컨테이너 상태:"
