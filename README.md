@@ -24,6 +24,9 @@ lecture_dashboard/
 ├── deploy.sh                # 일반 배포 스크립트
 ├── server-config.example.sh # 서버 설정 템플릿
 ├── server-config.sh         # 실제 서버 설정 (gitignore)
+├── .github/
+│   └── workflows/
+│       └── deploy.yml       # GitHub Actions 자동 배포 워크플로우
 ├── backend/
 │   ├── main.py              # FastAPI 메인 애플리케이션
 │   ├── config.py            # 환경 설정 로더
@@ -198,7 +201,68 @@ app.include_router(users.router)
 
 ## 리눅스 서버 배포
 
-### 사전 준비: 서버 설정
+### 방법 1: GitHub Actions 자동 배포 (가장 권장 ⭐⭐⭐)
+
+main 브랜치에 push하면 자동으로 서버에 배포됩니다.
+
+#### 초기 설정 (최초 1회)
+
+**1. SSH 키 생성 (로컬에서)**
+```bash
+# SSH 키페어 생성 (비밀번호 없이)
+ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions_key -N ""
+
+# 공개키를 서버에 등록
+ssh-copy-id -i ~/.ssh/github_actions_key.pub -p 1122 jennie@codeninjax.gonetis.com
+```
+
+**2. GitHub Secrets 설정**
+
+GitHub 저장소 → Settings → Secrets and variables → Actions → New repository secret
+
+다음 4개의 Secret을 추가:
+
+| Name | Value | 설명 |
+|------|-------|------|
+| `SSH_PRIVATE_KEY` | (개인키 내용) | `cat ~/.ssh/github_actions_key` 내용 전체 복사 |
+| `SERVER_HOST` | `codeninjax.gonetis.com` | 서버 호스트 |
+| `SERVER_PORT` | `1122` | SSH 포트 |
+| `SERVER_USER` | `jennie` | SSH 사용자명 |
+
+**3. 서버에 Docker 설치 (최초 1회)**
+```bash
+ssh -p 1122 jennie@codeninjax.gonetis.com
+
+# Docker 설치
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Docker Compose 설치
+sudo apt-get update
+sudo apt-get install docker-compose-plugin
+```
+
+#### 자동 배포 사용
+
+이제 코드를 수정하고 push하면 자동으로 배포됩니다:
+
+```bash
+git add .
+git commit -m "Update application"
+git push origin main
+```
+
+GitHub Actions 탭에서 배포 진행 상황을 확인할 수 있습니다.
+
+#### 수동 배포 트리거
+
+GitHub 저장소 → Actions → Deploy to Server → Run workflow
+
+### 방법 2: 로컬에서 수동 배포
+
+#### 사전 준비: 서버 설정
 
 배포 스크립트를 사용하기 전에 서버 정보를 설정해야 합니다:
 
@@ -220,9 +284,9 @@ REMOTE_DIR="/home/your-username/lecture_dashboard"
 
 ⚠️ **중요**: `server-config.sh` 파일은 `.gitignore`에 포함되어 GitHub에 푸시되지 않습니다.
 
-### 방법 1: Docker 배포 (권장 ⭐)
+#### Docker 배포 (권장)
 
-#### 자동 배포
+**자동 배포**
 프로젝트 루트에서 Docker 배포 스크립트를 실행하세요:
 
 ```bash
@@ -235,42 +299,19 @@ REMOTE_DIR="/home/your-username/lecture_dashboard"
 3. Docker 이미지 빌드
 4. 컨테이너 자동 시작
 
-#### 수동 Docker 배포
+**수동 Docker 배포**
 
-**1. 서버에 Docker 설치 (최초 1회)**
-```bash
-# 서버 접속
-ssh -p 1122 jennie@codeninjax.gonetis.com
-
-# Docker 설치
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# 현재 사용자를 docker 그룹에 추가
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Docker Compose 설치 (V2)
-sudo apt-get update
-sudo apt-get install docker-compose-plugin
-```
-
-**2. 프로젝트 파일 업로드**
+프로젝트 파일 업로드:
 ```bash
 # 로컬에서 실행
 scp -P 1122 -r backend/ frontend/ .env.dev Dockerfile docker-compose.yml .dockerignore jennie@codeninjax.gonetis.com:~/lecture_dashboard/
 ```
 
-**3. Docker 컨테이너 실행**
+Docker 컨테이너 실행:
 ```bash
 # 서버에서 실행
 cd ~/lecture_dashboard
 docker compose up -d --build
-```
-
-**4. 접속 확인**
-```
-http://codeninjax.gonetis.com:8000
 ```
 
 #### Docker 관리 명령어
@@ -296,9 +337,7 @@ docker compose up -d --build
 docker system prune -a
 ```
 
-### 방법 2: 일반 배포 (Python 가상환경)
-
-#### 자동 배포 스크립트 사용
+#### 일반 배포 (Python 가상환경)
 
 프로젝트 루트에서 배포 스크립트를 실행하세요:
 
