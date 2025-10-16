@@ -5,7 +5,6 @@ import pymysql
 from typing import Generator
 from config import config
 
-
 def get_db() -> Generator:
     """
     데이터베이스 연결 의존성
