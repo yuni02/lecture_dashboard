@@ -67,19 +67,19 @@ jobs:
 
             # 기존 컨테이너 중지 및 제거
             echo "🔄 기존 컨테이너 중지 중..."
-            sudo docker compose down 2>/dev/null || sudo docker-compose down 2>/dev/null || true
+            docker compose down 2>/dev/null || docker-compose down 2>/dev/null || true
 
             # Docker 이미지 빌드 및 컨테이너 시작
             echo "🐳 Docker 이미지 빌드 및 컨테이너 시작 중..."
             if command -v docker-compose &> /dev/null; then
-              sudo docker-compose up -d --build
+              docker-compose up -d --build
             else
-              sudo docker compose up -d --build
+              docker compose up -d --build
             fi
 
             # 컨테이너 상태 확인
             echo "📊 컨테이너 상태:"
-            sudo docker ps | grep lecture_dashboard || echo "컨테이너를 찾을 수 없습니다"
+            docker ps | grep lecture_dashboard || echo "컨테이너를 찾을 수 없습니다"
 
             echo "✅ 배포 완료!"
           ENDSSH
