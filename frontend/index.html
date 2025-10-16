@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <!-- 네비게이션 바 -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h1>🎓 FastCampus Dashboard</h1>
+        </div>
+        <ul class="navbar-menu">
+            <li><a href="/" class="active">대시보드</a></li>
+            <li><a href="/progress">진척률 통계</a></li>
+        </ul>
+    </nav>
+
     <div class="container">
         <!-- 헤더 -->
         <header>
@@ -83,21 +94,25 @@
         <!-- 모달 (강의 상세) -->
         <div id="course-modal" class="modal">
             <div class="modal-content">
-                <span class="modal-close">&times;</span>
-                <h2 id="modal-title">강의 제목</h2>
-                <div class="modal-stats">
-                    <div class="modal-stat">
-                        <strong>진도율:</strong> <span id="modal-progress">-</span>%
-                    </div>
-                    <div class="modal-stat">
-                        <strong>수강시간:</strong> <span id="modal-study-time">-</span>
-                    </div>
-                    <div class="modal-stat">
-                        <strong>전체시간:</strong> <span id="modal-total-time">-</span>
+                <div class="modal-header">
+                    <span class="modal-close">&times;</span>
+                    <h2 id="modal-title" class="modal-title">강의 제목</h2>
+                    <div class="modal-stats">
+                        <div class="modal-stat">
+                            <strong>진도율:</strong> <span id="modal-progress">-</span>%
+                        </div>
+                        <div class="modal-stat">
+                            <strong>수강시간:</strong> <span id="modal-study-time">-</span>
+                        </div>
+                        <div class="modal-stat">
+                            <strong>전체시간:</strong> <span id="modal-total-time">-</span>
+                        </div>
                     </div>
                 </div>
-                <div id="modal-lectures" class="lectures-list">
-                    <!-- JavaScript로 동적 생성 -->
+                <div class="modal-body">
+                    <div id="modal-lectures" class="lectures-list">
+                        <!-- JavaScript로 동적 생성 -->
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <a id="modal-link" href="#" target="_blank" class="btn-primary">강의 페이지 열기</a>

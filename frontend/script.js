@@ -89,8 +89,23 @@ function createCourseCard(course) {
         (course.total_lecture_time || 0) - (course.study_time || 0)
     );
 
+    const isManuallyCompleted = course.is_manually_completed || false;
+
     card.innerHTML = `
-        <div class="course-title">${course.course_title || 'Unknown Title'}</div>
+        <div class="course-header">
+            <div class="course-title">${course.course_title || 'Unknown Title'}</div>
+            <div class="manual-complete-wrapper">
+                <label class="manual-complete-label" onclick="event.stopPropagation();">
+                    <input
+                        type="checkbox"
+                        class="manual-complete-checkbox"
+                        ${isManuallyCompleted ? 'checked' : ''}
+                        onchange="toggleManuallyCompleted(${course.course_id}, this.checked)"
+                    />
+                    <span class="checkbox-text">크롤링 제외</span>
+                </label>
+            </div>
+        </div>
         <div class="course-progress">
             <div class="progress-bar">
                 <div class="progress-fill" style="width: ${progressPercent}%"></div>
@@ -278,6 +293,39 @@ function updateLastUpdateTime() {
 function showError(message) {
     const container = document.getElementById('courses-container');
     container.innerHTML = `<p class="loading" style="color: #ff6b6b;">${message}</p>`;
+}
+
+// 수동 완료 상태 토글
+async function toggleManuallyCompleted(courseId, isCompleted) {
+    try {
+        const response = await fetch(`${API_BASE}/api/courses/${courseId}/manually-completed`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                is_manually_completed: isCompleted
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update manually completed status');
+        }
+
+        const result = await response.json();
+
+        // 성공 메시지 표시 (선택사항)
+        console.log(result.message);
+
+        // 필요시 대시보드 새로고침
+        // loadDashboardData();
+
+    } catch (error) {
+        console.error('수동 완료 상태 업데이트 실패:', error);
+        alert('상태 업데이트에 실패했습니다.');
+        // 체크박스 상태 되돌리기
+        event.target.checked = !isCompleted;
+    }
 }
 
 // 새로고침 버튼 (선택 사항)

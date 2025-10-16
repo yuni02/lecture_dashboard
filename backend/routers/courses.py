@@ -4,12 +4,18 @@ Courses API Router
 """
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
+from pydantic import BaseModel
 from database import get_db
 
 router = APIRouter(
     prefix="/api/courses",
     tags=["courses"]
 )
+
+
+class ManuallyCompletedUpdate(BaseModel):
+    """수동 완료 상태 업데이트 요청"""
+    is_manually_completed: bool
 
 
 @router.get("")
@@ -27,7 +33,8 @@ async def get_courses(db = Depends(get_db)) -> List[Dict[str, Any]]:
                 total_lecture_time,
                 url,
                 created_at,
-                updated_at
+                updated_at,
+                is_manually_completed
             FROM courses
             ORDER BY updated_at DESC
         """
@@ -72,7 +79,8 @@ async def get_course(course_id: int, db = Depends(get_db)) -> Dict[str, Any]:
                 total_lecture_time,
                 url,
                 created_at,
-                updated_at
+                updated_at,
+                is_manually_completed
             FROM courses
             WHERE course_id = %s
         """
@@ -127,4 +135,48 @@ async def get_course(course_id: int, db = Depends(get_db)) -> Dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.patch("/{course_id}/manually-completed")
+async def update_manually_completed(
+    course_id: int,
+    data: ManuallyCompletedUpdate,
+    db = Depends(get_db)
+) -> Dict[str, Any]:
+    """강의의 수동 완료 상태 업데이트"""
+    try:
+        cursor = db.cursor()
+
+        # 강의 존재 확인
+        check_query = "SELECT course_id FROM courses WHERE course_id = %s"
+        cursor.execute(check_query, (course_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        # 수동 완료 상태 업데이트
+        update_query = """
+            UPDATE courses
+            SET is_manually_completed = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE course_id = %s
+        """
+
+        cursor.execute(update_query, (data.is_manually_completed, course_id))
+        db.commit()
+
+        cursor.close()
+
+        return {
+            "success": True,
+            "course_id": course_id,
+            "is_manually_completed": data.is_manually_completed,
+            "message": f"강의 크롤링 {'제외' if data.is_manually_completed else '포함'} 처리되었습니다."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")

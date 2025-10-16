@@ -81,3 +81,122 @@ async def get_completion_estimate(db = Depends(get_db)) -> Dict[str, Any]:
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/progress/daily")
+async def get_daily_progress(db = Depends(get_db)):
+    """일별 진척률 통계"""
+    try:
+        cursor = db.cursor()
+
+        query = """
+            SELECT
+                DATE(completed_at) as date,
+                COUNT(*) as completed_lectures,
+                SUM(lecture_time) as study_time_minutes
+            FROM lectures
+            WHERE is_completed = 1
+            AND completed_at IS NOT NULL
+            AND completed_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            GROUP BY DATE(completed_at)
+            ORDER BY date DESC
+        """
+
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # Decimal 및 datetime 변환
+        daily_data = []
+        for row in results:
+            daily_data.append({
+                'date': row['date'].strftime('%Y-%m-%d') if row.get('date') else None,
+                'completed_lectures': row.get('completed_lectures', 0),
+                'study_time_minutes': float(row['study_time_minutes']) if row.get('study_time_minutes') else 0
+            })
+
+        cursor.close()
+        return {'daily_progress': daily_data}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/progress/weekly")
+async def get_weekly_progress(db = Depends(get_db)):
+    """주별 진척률 통계"""
+    try:
+        cursor = db.cursor()
+
+        query = """
+            SELECT
+                YEARWEEK(completed_at, 1) as year_week,
+                DATE(DATE_SUB(completed_at, INTERVAL WEEKDAY(completed_at) DAY)) as week_start,
+                COUNT(*) as completed_lectures,
+                SUM(lecture_time) as study_time_minutes
+            FROM lectures
+            WHERE is_completed = 1
+            AND completed_at IS NOT NULL
+            AND completed_at >= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
+            GROUP BY YEARWEEK(completed_at, 1), week_start
+            ORDER BY year_week DESC
+        """
+
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # 데이터 변환
+        weekly_data = []
+        for row in results:
+            weekly_data.append({
+                'year_week': row.get('year_week'),
+                'week_start': row['week_start'].strftime('%Y-%m-%d') if row.get('week_start') else None,
+                'completed_lectures': row.get('completed_lectures', 0),
+                'study_time_minutes': float(row['study_time_minutes']) if row.get('study_time_minutes') else 0
+            })
+
+        cursor.close()
+        return {'weekly_progress': weekly_data}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/progress/course/{course_id}")
+async def get_course_progress_history(course_id: int, db = Depends(get_db)):
+    """특정 강의의 진척률 이력"""
+    try:
+        cursor = db.cursor()
+
+        # 강의별 일별 진척
+        query = """
+            SELECT
+                DATE(completed_at) as date,
+                COUNT(*) as completed_lectures,
+                SUM(lecture_time) as study_time_minutes,
+                (SELECT COUNT(*) FROM lectures WHERE course_id = %s AND is_completed = 1 AND DATE(completed_at) <= DATE(l.completed_at)) as cumulative_completed
+            FROM lectures l
+            WHERE course_id = %s
+            AND is_completed = 1
+            AND completed_at IS NOT NULL
+            GROUP BY DATE(completed_at)
+            ORDER BY date ASC
+        """
+
+        cursor.execute(query, (course_id, course_id))
+        results = cursor.fetchall()
+
+        # 데이터 변환
+        progress_data = []
+        for row in results:
+            progress_data.append({
+                'date': row['date'].strftime('%Y-%m-%d') if row.get('date') else None,
+                'completed_lectures': row.get('completed_lectures', 0),
+                'study_time_minutes': float(row['study_time_minutes']) if row.get('study_time_minutes') else 0,
+                'cumulative_completed': row.get('cumulative_completed', 0)
+            })
+
+        cursor.close()
+        return {'course_id': course_id, 'progress_history': progress_data}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
