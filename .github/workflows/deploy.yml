@@ -33,11 +33,11 @@ jobs:
             --exclude='.idea' \
             --exclude='.claude' \
             --exclude='*.pyc' \
-            --exclude='.env.local' \
+            --exclude='.env*' \
             --exclude='deploy.sh' \
             --exclude='deploy-docker.sh' \
             --exclude='server-config.sh' \
-            backend/ frontend/ .env.example .env.dev Dockerfile docker-compose.yml .dockerignore
+            backend/ frontend/ Dockerfile docker-compose.yml .dockerignore
 
       - name: Upload to server
         run: |
