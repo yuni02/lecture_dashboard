@@ -1,6 +1,14 @@
 // API Base URL
 const API_BASE = '';
 
+// 상태 변수
+let currentCourses = [];
+let filteredCourses = [];
+let currentPage = 1;
+let itemsPerPage = 20;
+let currentSort = 'updated_at_desc';
+let searchQuery = '';
+
 // 페이지 로드 시 데이터 가져오기
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboardData();
@@ -60,20 +68,213 @@ function updateCompletionEstimate(completion) {
         completion.days_5h_per_day ? formatDaysToYearMonthDay(completion.days_5h_per_day) : '-';
 }
 
-// 강의 목록 렌더링
+// 강의 목록 렌더링 (테이블 형식)
 function renderCourses(courses) {
-    const container = document.getElementById('courses-container');
-    container.innerHTML = '';
-
     if (!courses || courses.length === 0) {
-        container.innerHTML = '<p class="loading">강의 데이터가 없습니다.</p>';
+        currentCourses = [];
+        filteredCourses = [];
+        renderTable();
         return;
     }
 
-    courses.forEach(course => {
-        const courseCard = createCourseCard(course);
-        container.appendChild(courseCard);
+    // 현재 강의 목록 저장
+    currentCourses = courses;
+
+    // 필터 및 정렬 적용
+    applyFiltersAndSort();
+}
+
+// 필터 및 정렬 적용
+function applyFiltersAndSort() {
+    // 검색 필터 적용
+    if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        filteredCourses = currentCourses.filter(course =>
+            (course.course_title || '').toLowerCase().includes(query)
+        );
+    } else {
+        filteredCourses = [...currentCourses];
+    }
+
+    // 정렬 적용
+    sortCourses(currentSort);
+
+    // 첫 페이지로 이동
+    currentPage = 1;
+
+    // 테이블 렌더링
+    renderTable();
+}
+
+// 정렬
+function sortCourses(sortType) {
+    filteredCourses.sort((a, b) => {
+        let aVal, bVal;
+
+        // 정렬 기준 파싱
+        if (sortType === 'title_asc' || sortType === 'title_desc') {
+            aVal = (a.course_title || '').toLowerCase();
+            bVal = (b.course_title || '').toLowerCase();
+            return sortType === 'title_asc'
+                ? (aVal > bVal ? 1 : aVal < bVal ? -1 : 0)
+                : (aVal < bVal ? 1 : aVal > bVal ? -1 : 0);
+        } else if (sortType === 'progress_rate_asc' || sortType === 'progress_rate_desc') {
+            aVal = a.progress_rate || 0;
+            bVal = b.progress_rate || 0;
+            return sortType === 'progress_rate_asc' ? aVal - bVal : bVal - aVal;
+        } else if (sortType === 'remaining_time_asc' || sortType === 'remaining_time_desc') {
+            aVal = (a.total_lecture_time || 0) - (a.study_time || 0);
+            bVal = (b.total_lecture_time || 0) - (b.study_time || 0);
+            return sortType === 'remaining_time_asc' ? aVal - bVal : bVal - aVal;
+        } else if (sortType === 'updated_at_desc') {
+            aVal = new Date(a.updated_at || 0);
+            bVal = new Date(b.updated_at || 0);
+            return bVal - aVal;
+        }
+
+        return 0;
     });
+}
+
+// 테이블 렌더링
+function renderTable() {
+    const tbody = document.getElementById('courses-table-body');
+    tbody.innerHTML = '';
+
+    if (filteredCourses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">강의 데이터가 없습니다.</td></tr>';
+        renderPagination();
+        return;
+    }
+
+    // 페이지네이션 계산
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageCourses = filteredCourses.slice(start, end);
+
+    // 테이블 행 생성
+    pageCourses.forEach((course, index) => {
+        const rowNum = start + index + 1;
+        const progressPercent = course.progress_rate || 0;
+        const studyTime = formatMinutesToTime(course.study_time || 0);
+        const totalTime = formatMinutesToTime(course.total_lecture_time || 0);
+        const remainingTime = formatMinutesToTime(
+            (course.total_lecture_time || 0) - (course.study_time || 0)
+        );
+        const isManuallyCompleted = course.is_manually_completed || false;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${rowNum}</td>
+            <td class="checkbox-cell">
+                <input
+                    type="checkbox"
+                    class="table-checkbox"
+                    ${isManuallyCompleted ? 'checked' : ''}
+                    onchange="toggleManuallyCompleted(${course.course_id}, this.checked)"
+                    onclick="event.stopPropagation()"
+                />
+            </td>
+            <td class="course-title-cell" onclick="openCourseModal(${course.course_id})">
+                ${course.course_title || 'Unknown Title'}
+            </td>
+            <td>
+                <div class="progress-cell">
+                    <div class="progress-mini-bar">
+                        <div class="progress-mini-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                    <span class="progress-percent">${progressPercent}%</span>
+                </div>
+            </td>
+            <td class="time-value">${studyTime}</td>
+            <td class="time-value">${totalTime}</td>
+            <td class="time-value">${remainingTime}</td>
+            <td>
+                <button class="detail-btn" onclick="openCourseModal(${course.course_id})">
+                    상세보기
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    // 페이지네이션 렌더링
+    renderPagination();
+}
+
+// 페이지네이션 렌더링
+function renderPagination() {
+    const pagination = document.getElementById('pagination');
+    const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
+
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    // 이전 버튼
+    html += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">‹</button>`;
+
+    // 페이지 번호
+    const maxButtons = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+    if (endPage - startPage < maxButtons - 1) {
+        startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+
+    if (startPage > 1) {
+        html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
+        if (startPage > 2) {
+            html += `<span class="page-info">...</span>`;
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += `<span class="page-info">...</span>`;
+        }
+        html += `<button class="page-btn" onclick="changePage(${totalPages})">${totalPages}</button>`;
+    }
+
+    // 다음 버튼
+    html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">›</button>`;
+
+    pagination.innerHTML = html;
+}
+
+// 페이지 변경
+function changePage(page) {
+    currentPage = page;
+    renderTable();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 검색 처리
+function handleSearch() {
+    searchQuery = document.getElementById('search-input').value;
+    applyFiltersAndSort();
+}
+
+// 정렬 처리
+function handleSort() {
+    currentSort = document.getElementById('sort-select').value;
+    applyFiltersAndSort();
+}
+
+// 페이지당 항목 수 변경
+function handlePerPageChange() {
+    itemsPerPage = parseInt(document.getElementById('per-page-select').value);
+    currentPage = 1;
+    renderTable();
 }
 
 // 강의 카드 생성
@@ -291,8 +492,10 @@ function updateLastUpdateTime() {
 
 // 에러 표시
 function showError(message) {
-    const container = document.getElementById('courses-container');
-    container.innerHTML = `<p class="loading" style="color: #ff6b6b;">${message}</p>`;
+    const tbody = document.getElementById('courses-table-body');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color: #ff6b6b; text-align: center; padding: 40px;">${message}</td></tr>`;
+    }
 }
 
 // 수동 완료 상태 토글
@@ -317,14 +520,60 @@ async function toggleManuallyCompleted(courseId, isCompleted) {
         // 성공 메시지 표시 (선택사항)
         console.log(result.message);
 
-        // 필요시 대시보드 새로고침
-        // loadDashboardData();
+        // currentCourses 업데이트
+        const courseIndex = currentCourses.findIndex(c => c.course_id === courseId);
+        if (courseIndex !== -1) {
+            currentCourses[courseIndex].is_manually_completed = isCompleted;
+        }
 
     } catch (error) {
         console.error('수동 완료 상태 업데이트 실패:', error);
         alert('상태 업데이트에 실패했습니다.');
         // 체크박스 상태 되돌리기
         event.target.checked = !isCompleted;
+    }
+}
+
+// 전체 선택/해제
+async function bulkToggleManuallyCompleted(isCompleted) {
+    if (!currentCourses || currentCourses.length === 0) {
+        alert('강의 목록이 없습니다.');
+        return;
+    }
+
+    const confirmMessage = isCompleted
+        ? `전체 ${currentCourses.length}개 강의를 크롤링에서 제외하시겠습니까?`
+        : `전체 ${currentCourses.length}개 강의를 크롤링에 포함하시겠습니까?`;
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    try {
+        // 모든 강의에 대해 병렬로 업데이트
+        const promises = currentCourses.map(course =>
+            fetch(`${API_BASE}/api/courses/${course.course_id}/manually-completed`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    is_manually_completed: isCompleted
+                })
+            })
+        );
+
+        await Promise.all(promises);
+
+        // 성공 메시지
+        alert(`전체 강의가 크롤링 ${isCompleted ? '제외' : '포함'} 처리되었습니다.`);
+
+        // 대시보드 새로고침
+        loadDashboardData();
+
+    } catch (error) {
+        console.error('전체 업데이트 실패:', error);
+        alert('일부 강의의 상태 업데이트에 실패했습니다.');
     }
 }
 
