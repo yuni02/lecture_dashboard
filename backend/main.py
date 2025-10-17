@@ -30,6 +30,12 @@ async def root():
     frontend_path = os.path.join(os.path.dirname(__file__), '../frontend/index.html')
     return FileResponse(frontend_path)
 
+@app.get("/courses")
+async def courses_page():
+    """강의 목록 페이지"""
+    frontend_path = os.path.join(os.path.dirname(__file__), '../frontend/courses.html')
+    return FileResponse(frontend_path)
+
 @app.get("/progress")
 async def progress_page():
     """진척률 통계 페이지"""

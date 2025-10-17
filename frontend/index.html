@@ -14,6 +14,7 @@
         </div>
         <ul class="navbar-menu">
             <li><a href="/" class="active">대시보드</a></li>
+            <li><a href="/courses">강의 목록</a></li>
             <li><a href="/progress">진척률 통계</a></li>
         </ul>
     </nav>
@@ -82,110 +83,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- 강의 목록 -->
-        <section class="courses-section">
-            <div class="courses-header">
-                <h2>📖 강의 목록</h2>
-                <div class="bulk-actions">
-                    <button class="bulk-btn" onclick="bulkToggleManuallyCompleted(true)">
-                        전체 크롤링 제외
-                    </button>
-                    <button class="bulk-btn bulk-btn-secondary" onclick="bulkToggleManuallyCompleted(false)">
-                        전체 크롤링 포함
-                    </button>
-                </div>
-            </div>
-
-            <!-- 검색 및 필터 -->
-            <div class="table-controls">
-                <div class="search-box">
-                    <input
-                        type="text"
-                        id="search-input"
-                        class="search-input"
-                        placeholder="강의명 검색..."
-                        onkeyup="handleSearch()"
-                    />
-                </div>
-                <div class="sort-controls">
-                    <label for="sort-select">정렬:</label>
-                    <select id="sort-select" class="sort-select" onchange="handleSort()">
-                        <option value="updated_at_desc">최근 업데이트순</option>
-                        <option value="progress_rate_desc">진도율 높은순</option>
-                        <option value="progress_rate_asc">진도율 낮은순</option>
-                        <option value="title_asc">제목순 (A-Z)</option>
-                        <option value="title_desc">제목순 (Z-A)</option>
-                        <option value="remaining_time_desc">남은시간 많은순</option>
-                        <option value="remaining_time_asc">남은시간 적은순</option>
-                    </select>
-                </div>
-                <div class="per-page-control">
-                    <label for="per-page-select">표시:</label>
-                    <select id="per-page-select" class="per-page-select" onchange="handlePerPageChange()">
-                        <option value="10">10개</option>
-                        <option value="20" selected>20개</option>
-                        <option value="50">50개</option>
-                        <option value="100">100개</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 테이블 -->
-            <div class="table-wrapper">
-                <table class="courses-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px;">No</th>
-                            <th style="width: 80px;">크롤링 제외</th>
-                            <th>강의명</th>
-                            <th style="width: 100px;">진도율</th>
-                            <th style="width: 120px;">수강시간</th>
-                            <th style="width: 120px;">전체시간</th>
-                            <th style="width: 120px;">남은시간</th>
-                            <th style="width: 100px;">상세</th>
-                        </tr>
-                    </thead>
-                    <tbody id="courses-table-body">
-                        <!-- JavaScript로 동적 생성 -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- 페이지네이션 -->
-            <div class="pagination" id="pagination">
-                <!-- JavaScript로 동적 생성 -->
-            </div>
-        </section>
-
-        <!-- 모달 (강의 상세) -->
-        <div id="course-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span class="modal-close">&times;</span>
-                    <h2 id="modal-title" class="modal-title">강의 제목</h2>
-                    <div class="modal-stats">
-                        <div class="modal-stat">
-                            <strong>진도율:</strong> <span id="modal-progress">-</span>%
-                        </div>
-                        <div class="modal-stat">
-                            <strong>수강시간:</strong> <span id="modal-study-time">-</span>
-                        </div>
-                        <div class="modal-stat">
-                            <strong>전체시간:</strong> <span id="modal-total-time">-</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-body">
-                    <div id="modal-lectures" class="lectures-list">
-                        <!-- JavaScript로 동적 생성 -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <a id="modal-link" href="#" target="_blank" class="btn-primary">강의 페이지 열기</a>
-                </div>
-            </div>
-        </div>
 
         <!-- 푸터 -->
         <footer>
