@@ -89,9 +89,22 @@ function applyFiltersAndSort() {
     // 검색 필터 적용
     if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        filteredCourses = currentCourses.filter(course =>
-            (course.course_title || '').toLowerCase().includes(query)
-        );
+        filteredCourses = currentCourses.filter(course => {
+            // 강의명 검색
+            if ((course.course_title || '').toLowerCase().includes(query)) {
+                return true;
+            }
+
+            // 강의 목차(lectures) 검색
+            if (course.lectures && Array.isArray(course.lectures)) {
+                return course.lectures.some(lecture =>
+                    (lecture.section_title || '').toLowerCase().includes(query) ||
+                    (lecture.lecture_title || '').toLowerCase().includes(query)
+                );
+            }
+
+            return false;
+        });
     } else {
         filteredCourses = [...currentCourses];
     }

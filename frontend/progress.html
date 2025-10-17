@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>학습 진척률 통계 - FastCampus Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/components/navbar.js"></script>
     <style>
         /* Progress Page Specific Styles */
         .progress-container {
@@ -175,15 +176,7 @@
 </head>
 <body>
     <!-- 네비게이션 바 -->
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <h1>🎓 FastCampus Dashboard</h1>
-        </div>
-        <ul class="navbar-menu">
-            <li><a href="/">대시보드</a></li>
-            <li><a href="/progress" class="active">진척률 통계</a></li>
-        </ul>
-    </nav>
+    <div id="navbar-container" data-page="progress"></div>
 
     <div class="progress-container">
         <header>

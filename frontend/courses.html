@@ -5,19 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>강의 목록 - FastCampus Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/components/navbar.js"></script>
 </head>
 <body>
     <!-- 네비게이션 바 -->
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <h1>🎓 FastCampus Dashboard</h1>
-        </div>
-        <ul class="navbar-menu">
-            <li><a href="/">대시보드</a></li>
-            <li><a href="/courses" class="active">강의 목록</a></li>
-            <li><a href="/progress">진척률 통계</a></li>
-        </ul>
-    </nav>
+    <div id="navbar-container" data-page="courses"></div>
 
     <div class="container">
         <!-- 헤더 -->

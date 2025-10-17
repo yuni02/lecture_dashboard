@@ -55,6 +55,34 @@ async def get_courses(db = Depends(get_db)) -> List[Dict[str, Any]]:
             if course.get('updated_at'):
                 course['updated_at'] = course['updated_at'].isoformat()
 
+        # 각 강의의 lectures 정보 추가
+        lectures_query = """
+            SELECT
+                course_id,
+                section_title,
+                lecture_title
+            FROM lectures
+            WHERE course_id IN ({})
+            ORDER BY course_id, sort_order
+        """
+
+        if courses:
+            course_ids = [str(course['course_id']) for course in courses]
+            cursor.execute(lectures_query.format(','.join(course_ids)))
+            all_lectures = cursor.fetchall()
+
+            # course_id별로 lectures 그룹화
+            lectures_by_course = {}
+            for lecture in all_lectures:
+                course_id = lecture['course_id']
+                if course_id not in lectures_by_course:
+                    lectures_by_course[course_id] = []
+                lectures_by_course[course_id].append(lecture)
+
+            # 각 강의에 lectures 추가
+            for course in courses:
+                course['lectures'] = lectures_by_course.get(course['course_id'], [])
+
         cursor.close()
 
         return courses
