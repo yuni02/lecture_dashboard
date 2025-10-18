@@ -6,7 +6,7 @@ let currentCourses = [];
 let filteredCourses = [];
 let currentPage = 1;
 let itemsPerPage = 20;
-let currentSort = 'updated_at_desc';
+let currentSort = 'progress_rate_desc';
 let searchQuery = '';
 
 // 페이지 로드 시 데이터 가져오기
@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 강의 목록 데이터 로드
 async function loadCoursesData() {
     try {
+        showLoading('강의 목록을 불러오는 중...');
         const courses = await fetch(`${API_BASE}/api/courses`).then(res => res.json());
 
         // 강의 목록 렌더링
@@ -29,6 +30,8 @@ async function loadCoursesData() {
     } catch (error) {
         console.error('데이터 로드 실패:', error);
         showError('데이터를 불러오는데 실패했습니다.');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -100,8 +103,8 @@ function sortCourses(sortType) {
             bVal = b.progress_rate || 0;
             return sortType === 'progress_rate_asc' ? aVal - bVal : bVal - aVal;
         } else if (sortType === 'remaining_time_asc' || sortType === 'remaining_time_desc') {
-            aVal = (a.total_lecture_time || 0) - (a.study_time || 0);
-            bVal = (b.total_lecture_time || 0) - (b.study_time || 0);
+            aVal = a.remaining_time || 0;
+            bVal = b.remaining_time || 0;
             return sortType === 'remaining_time_asc' ? aVal - bVal : bVal - aVal;
         } else if (sortType === 'updated_at_desc') {
             aVal = new Date(a.updated_at || 0);
@@ -135,14 +138,13 @@ function renderTable() {
         const progressPercent = course.progress_rate || 0;
         const studyTime = formatMinutesToTime(course.study_time || 0);
         const totalTime = formatMinutesToTime(course.total_lecture_time || 0);
-        const remainingTime = formatMinutesToTime(
-            (course.total_lecture_time || 0) - (course.study_time || 0)
-        );
+        const remainingTime = formatMinutesToTime(course.remaining_time || 0);
         const isManuallyCompleted = course.is_manually_completed || false;
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${rowNum}</td>
+            <td style="text-align: center; color: #666;">${course.course_id}</td>
             <td class="checkbox-cell">
                 <input
                     type="checkbox"
@@ -166,11 +168,6 @@ function renderTable() {
             <td class="time-value">${studyTime}</td>
             <td class="time-value">${totalTime}</td>
             <td class="time-value">${remainingTime}</td>
-            <td>
-                <button class="detail-btn" onclick="openCourseModal(${course.course_id})">
-                    상세보기
-                </button>
-            </td>
         `;
 
         tbody.appendChild(row);
@@ -257,6 +254,7 @@ function handlePerPageChange() {
 // 모달 열기
 async function openCourseModal(courseId) {
     try {
+        showLoading('강의 상세 정보를 불러오는 중...');
         const course = await fetch(`${API_BASE}/api/courses/${courseId}`).then(res => res.json());
 
         document.getElementById('modal-title').textContent = course.course_title;
@@ -276,6 +274,8 @@ async function openCourseModal(courseId) {
     } catch (error) {
         console.error('강의 상세 정보 로드 실패:', error);
         alert('강의 정보를 불러오는데 실패했습니다.');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -451,6 +451,8 @@ async function bulkToggleManuallyCompleted(isCompleted) {
     }
 
     try {
+        showLoading(`전체 강의 상태 업데이트 중... (0/${currentCourses.length})`);
+
         // 모든 강의에 대해 병렬로 업데이트
         const promises = currentCourses.map(course =>
             fetch(`${API_BASE}/api/courses/${course.course_id}/manually-completed`, {
@@ -475,5 +477,6 @@ async function bulkToggleManuallyCompleted(isCompleted) {
     } catch (error) {
         console.error('전체 업데이트 실패:', error);
         alert('일부 강의의 상태 업데이트에 실패했습니다.');
+        hideLoading();
     }
 }

@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // 대시보드 데이터 로드
 async function loadDashboardData() {
     try {
+        showLoading('대시보드 데이터를 불러오는 중...');
+
         // 병렬로 데이터 가져오기
         const [courses, summary, completion] = await Promise.all([
             fetch(`${API_BASE}/api/courses`).then(res => res.json()),
@@ -40,6 +42,8 @@ async function loadDashboardData() {
     } catch (error) {
         console.error('데이터 로드 실패:', error);
         showError('데이터를 불러오는데 실패했습니다.');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -136,8 +140,8 @@ function sortCourses(sortType) {
             bVal = b.progress_rate || 0;
             return sortType === 'progress_rate_asc' ? aVal - bVal : bVal - aVal;
         } else if (sortType === 'remaining_time_asc' || sortType === 'remaining_time_desc') {
-            aVal = (a.total_lecture_time || 0) - (a.study_time || 0);
-            bVal = (b.total_lecture_time || 0) - (b.study_time || 0);
+            aVal = a.remaining_time || 0;
+            bVal = b.remaining_time || 0;
             return sortType === 'remaining_time_asc' ? aVal - bVal : bVal - aVal;
         } else if (sortType === 'updated_at_desc') {
             aVal = new Date(a.updated_at || 0);
@@ -171,9 +175,7 @@ function renderTable() {
         const progressPercent = course.progress_rate || 0;
         const studyTime = formatMinutesToTime(course.study_time || 0);
         const totalTime = formatMinutesToTime(course.total_lecture_time || 0);
-        const remainingTime = formatMinutesToTime(
-            (course.total_lecture_time || 0) - (course.study_time || 0)
-        );
+        const remainingTime = formatMinutesToTime(course.remaining_time || 0);
         const isManuallyCompleted = course.is_manually_completed || false;
 
         const row = document.createElement('tr');
@@ -299,9 +301,7 @@ function createCourseCard(course) {
     const progressPercent = course.progress_rate || 0;
     const studyTime = formatMinutesToTime(course.study_time || 0);
     const totalTime = formatMinutesToTime(course.total_lecture_time || 0);
-    const remainingTime = formatMinutesToTime(
-        (course.total_lecture_time || 0) - (course.study_time || 0)
-    );
+    const remainingTime = formatMinutesToTime(course.remaining_time || 0);
 
     const isManuallyCompleted = course.is_manually_completed || false;
 
@@ -348,8 +348,10 @@ function createCourseCard(course) {
 // 모달 열기
 async function openCourseModal(courseId) {
     try {
+        showLoading('강의 상세 정보를 불러오는 중...');
         const course = await fetch(`${API_BASE}/api/courses/${courseId}`).then(res => res.json());
 
+        // 기본 정보
         document.getElementById('modal-title').textContent = course.course_title;
         document.getElementById('modal-progress').textContent = course.progress_rate || 0;
         document.getElementById('modal-study-time').textContent =
@@ -358,8 +360,27 @@ async function openCourseModal(courseId) {
             formatMinutesToTime(course.total_lecture_time || 0);
         document.getElementById('modal-link').href = course.url;
 
+        // 커리큘럼 통계 계산
+        const lectures = course.lectures || [];
+        const uniqueSections = new Set(lectures.map(l => l.section_number)).size;
+        const totalLectures = lectures.length;
+        const completedLectures = lectures.filter(l => l.is_completed).length;
+        const lectureCompletionRate = totalLectures > 0
+            ? ((completedLectures / totalLectures) * 100).toFixed(1)
+            : 0;
+        const remainingTime = course.remaining_time || 0;
+
+        // 커리큘럼 통계 표시
+        document.getElementById('modal-total-sections').textContent = uniqueSections;
+        document.getElementById('modal-total-lectures').textContent = totalLectures;
+        document.getElementById('modal-completed-lectures').textContent =
+            `${completedLectures} / ${totalLectures}`;
+        document.getElementById('modal-lecture-completion').textContent = `${lectureCompletionRate}%`;
+        document.getElementById('modal-remaining-time').textContent =
+            formatMinutesToTime(remainingTime);
+
         // 강의 목차 렌더링
-        renderLectures(course.lectures || []);
+        renderLectures(lectures);
 
         // 모달 표시
         document.getElementById('course-modal').style.display = 'block';
@@ -367,6 +388,8 @@ async function openCourseModal(courseId) {
     } catch (error) {
         console.error('강의 상세 정보 로드 실패:', error);
         alert('강의 정보를 불러오는데 실패했습니다.');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -380,12 +403,20 @@ function renderLectures(lectures) {
         return;
     }
 
+    // 제목 추가
+    const listTitle = document.createElement('h3');
+    listTitle.textContent = '📋 강의 목차';
+    listTitle.style.marginBottom = '15px';
+    listTitle.style.color = '#333';
+    container.appendChild(listTitle);
+
     // 섹션별로 그룹화
     const sections = {};
     lectures.forEach(lecture => {
         const sectionKey = `${lecture.section_number}`;
         if (!sections[sectionKey]) {
             sections[sectionKey] = {
+                number: lecture.section_number,
                 title: lecture.section_title,
                 lectures: []
             };
@@ -397,14 +428,32 @@ function renderLectures(lectures) {
     Object.keys(sections).sort((a, b) => parseInt(a) - parseInt(b)).forEach(sectionKey => {
         const section = sections[sectionKey];
 
+        // 섹션 통계 계산
+        const totalInSection = section.lectures.length;
+        const completedInSection = section.lectures.filter(l => l.is_completed).length;
+        const sectionProgress = totalInSection > 0
+            ? ((completedInSection / totalInSection) * 100).toFixed(0)
+            : 0;
+
         const sectionDiv = document.createElement('div');
         sectionDiv.className = 'section-group';
 
         const sectionTitle = document.createElement('div');
         sectionTitle.className = 'section-title';
-        sectionTitle.textContent = section.title;
+
+        const sectionTitleText = document.createElement('span');
+        sectionTitleText.className = 'section-title-text';
+        sectionTitleText.textContent = `섹션 ${section.number}. ${section.title}`;
+
+        const sectionStats = document.createElement('span');
+        sectionStats.className = 'section-stats';
+        sectionStats.textContent = `${completedInSection}/${totalInSection} (${sectionProgress}%)`;
+
+        sectionTitle.appendChild(sectionTitleText);
+        sectionTitle.appendChild(sectionStats);
         sectionDiv.appendChild(sectionTitle);
 
+        // 강의 목록
         section.lectures.forEach(lecture => {
             const lectureDiv = document.createElement('div');
             lectureDiv.className = 'lecture-item';
@@ -412,17 +461,27 @@ function renderLectures(lectures) {
                 lectureDiv.classList.add('completed');
             }
 
+            // 강의 번호
+            if (lecture.lecture_number) {
+                const lectureNumber = document.createElement('span');
+                lectureNumber.className = 'lecture-number';
+                lectureNumber.textContent = `${lecture.lecture_number}.`;
+                lectureDiv.appendChild(lectureNumber);
+            }
+
+            // 강의 제목
             const lectureTitle = document.createElement('span');
             lectureTitle.className = 'lecture-title';
             lectureTitle.textContent = lecture.lecture_title;
+            lectureDiv.appendChild(lectureTitle);
 
+            // 강의 시간
             const lectureTime = document.createElement('span');
             lectureTime.className = 'lecture-time';
             lectureTime.textContent = formatMinutesToTime(lecture.lecture_time || 0);
-
-            lectureDiv.appendChild(lectureTitle);
             lectureDiv.appendChild(lectureTime);
 
+            // 완료 표시
             if (lecture.is_completed) {
                 const completedBadge = document.createElement('span');
                 completedBadge.className = 'lecture-completed';
@@ -563,6 +622,8 @@ async function bulkToggleManuallyCompleted(isCompleted) {
     }
 
     try {
+        showLoading(`전체 강의 상태 업데이트 중... (0/${currentCourses.length})`);
+
         // 모든 강의에 대해 병렬로 업데이트
         const promises = currentCourses.map(course =>
             fetch(`${API_BASE}/api/courses/${course.course_id}/manually-completed`, {
@@ -587,6 +648,7 @@ async function bulkToggleManuallyCompleted(isCompleted) {
     } catch (error) {
         console.error('전체 업데이트 실패:', error);
         alert('일부 강의의 상태 업데이트에 실패했습니다.');
+        hideLoading();
     }
 }
 

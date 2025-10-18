@@ -6,6 +6,7 @@
     <title>강의 목록 - FastCampus Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="/static/components/navbar.js"></script>
+    <script src="/static/components/loading.js"></script>
 </head>
 <body>
     <!-- 네비게이션 바 -->
@@ -46,9 +47,9 @@
                 <div class="sort-controls">
                     <label for="sort-select">정렬:</label>
                     <select id="sort-select" class="sort-select" onchange="handleSort()">
-                        <option value="updated_at_desc">최근 업데이트순</option>
-                        <option value="progress_rate_desc">진도율 높은순</option>
+                        <option value="progress_rate_desc" selected>진도율 높은순</option>
                         <option value="progress_rate_asc">진도율 낮은순</option>
+                        <option value="updated_at_desc">최근 업데이트순</option>
                         <option value="title_asc">제목순 (A-Z)</option>
                         <option value="title_desc">제목순 (Z-A)</option>
                         <option value="remaining_time_desc">남은시간 많은순</option>
@@ -72,13 +73,13 @@
                     <thead>
                         <tr>
                             <th style="width: 50px;">No</th>
+                            <th style="width: 80px;">ID</th>
                             <th style="width: 80px;">크롤링 제외</th>
                             <th>강의명</th>
                             <th style="width: 100px;">진도율</th>
                             <th style="width: 120px;">수강시간</th>
                             <th style="width: 120px;">전체시간</th>
                             <th style="width: 120px;">남은시간</th>
-                            <th style="width: 100px;">상세</th>
                         </tr>
                     </thead>
                     <tbody id="courses-table-body">
