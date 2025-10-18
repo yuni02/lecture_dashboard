@@ -86,18 +86,18 @@ body {
 header {
     text-align: center;
     color: white;
-    margin-bottom: 40px;
-    padding: 30px 0;
+    margin-bottom: 20px;
+    padding: 15px 0;
 }
 
 header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+    font-size: 1.8rem;
+    margin-bottom: 5px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
 }
 
 header .subtitle {
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     opacity: 0.9;
 }
 
@@ -193,21 +193,21 @@ header .subtitle {
 
 /* Courses Section */
 .courses-section {
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 
 .courses-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 10px;
 }
 
 .courses-section h2 {
     color: white;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     margin: 0;
 }
 
@@ -314,8 +314,8 @@ header .subtitle {
     border-radius: 12px;
     overflow-x: auto;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-    max-height: calc(100vh - 400px);
+    margin-bottom: 15px;
+    max-height: calc(100vh - 280px);
     overflow-y: auto;
     position: relative;
 }
@@ -712,10 +712,25 @@ header .subtitle {
     border-bottom: 2px solid #4c6ef5;
 }
 
+.chapter-group {
+    margin-left: 15px;
+    margin-top: 10px;
+}
+
+.chapter-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 8px;
+    padding-left: 10px;
+    border-left: 3px solid #9c27b0;
+}
+
 .lecture-item {
     padding: 12px;
     background: #f9f9f9;
     margin-bottom: 8px;
+    margin-left: 30px;
     border-radius: 6px;
     display: flex;
     justify-content: space-between;
@@ -771,13 +786,14 @@ header .subtitle {
 footer {
     text-align: center;
     color: white;
-    padding: 30px 0;
-    margin-top: 40px;
+    padding: 15px 0;
+    margin-top: 20px;
 }
 
 footer p {
-    margin: 5px 0;
+    margin: 3px 0;
     opacity: 0.9;
+    font-size: 0.85rem;
 }
 
 /* Loading State */

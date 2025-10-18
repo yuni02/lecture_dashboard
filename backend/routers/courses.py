@@ -164,6 +164,8 @@ async def get_course(course_id: int, db = Depends(get_db)) -> Dict[str, Any]:
             SELECT
                 section_number,
                 section_title,
+                chapter_number,
+                chapter_title,
                 lecture_number,
                 lecture_title,
                 lecture_time,

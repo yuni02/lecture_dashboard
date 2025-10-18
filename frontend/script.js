@@ -94,6 +94,12 @@ function applyFiltersAndSort() {
     if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         filteredCourses = currentCourses.filter(course => {
+            // ID 검색 (숫자인 경우 정확히 일치, 문자열인 경우 포함)
+            const courseIdStr = String(course.course_id || '');
+            if (courseIdStr.includes(query)) {
+                return true;
+            }
+
             // 강의명 검색
             if ((course.course_title || '').toLowerCase().includes(query)) {
                 return true;
@@ -393,7 +399,7 @@ async function openCourseModal(courseId) {
     }
 }
 
-// 강의 목차 렌더링
+// 강의 목차 렌더링 (Section > Chapter > Lecture 계층 구조)
 function renderLectures(lectures) {
     const container = document.getElementById('modal-lectures');
     container.innerHTML = '';
@@ -410,30 +416,47 @@ function renderLectures(lectures) {
     listTitle.style.color = '#333';
     container.appendChild(listTitle);
 
-    // 섹션별로 그룹화
+    // Section > Chapter > Lecture 계층 구조로 그룹화
     const sections = {};
     lectures.forEach(lecture => {
-        const sectionKey = `${lecture.section_number}`;
+        const sectionKey = `${lecture.section_number || 0}`;
+
         if (!sections[sectionKey]) {
             sections[sectionKey] = {
                 number: lecture.section_number,
                 title: lecture.section_title,
-                lectures: []
+                chapters: {}
             };
         }
-        sections[sectionKey].lectures.push(lecture);
+
+        // Chapter가 있는 경우
+        if (lecture.chapter_number !== null && lecture.chapter_number !== undefined) {
+            const chapterKey = `${lecture.chapter_number || 0}`;
+
+            if (!sections[sectionKey].chapters[chapterKey]) {
+                sections[sectionKey].chapters[chapterKey] = {
+                    number: lecture.chapter_number,
+                    title: lecture.chapter_title,
+                    lectures: []
+                };
+            }
+            sections[sectionKey].chapters[chapterKey].lectures.push(lecture);
+        } else {
+            // Chapter가 없는 경우 (직접 Section 아래에 Lecture)
+            if (!sections[sectionKey].chapters['no-chapter']) {
+                sections[sectionKey].chapters['no-chapter'] = {
+                    number: null,
+                    title: null,
+                    lectures: []
+                };
+            }
+            sections[sectionKey].chapters['no-chapter'].lectures.push(lecture);
+        }
     });
 
     // 섹션별 렌더링
     Object.keys(sections).sort((a, b) => parseInt(a) - parseInt(b)).forEach(sectionKey => {
         const section = sections[sectionKey];
-
-        // 섹션 통계 계산
-        const totalInSection = section.lectures.length;
-        const completedInSection = section.lectures.filter(l => l.is_completed).length;
-        const sectionProgress = totalInSection > 0
-            ? ((completedInSection / totalInSection) * 100).toFixed(0)
-            : 0;
 
         const sectionDiv = document.createElement('div');
         sectionDiv.className = 'section-group';
@@ -443,7 +466,18 @@ function renderLectures(lectures) {
 
         const sectionTitleText = document.createElement('span');
         sectionTitleText.className = 'section-title-text';
-        sectionTitleText.textContent = `섹션 ${section.number}. ${section.title}`;
+        sectionTitleText.textContent = `📚 섹션 ${section.number}. ${section.title || ''}`;
+
+        // 섹션 통계 계산 (모든 하위 강의 포함)
+        let totalInSection = 0;
+        let completedInSection = 0;
+        Object.values(section.chapters).forEach(chapter => {
+            totalInSection += chapter.lectures.length;
+            completedInSection += chapter.lectures.filter(l => l.is_completed).length;
+        });
+        const sectionProgress = totalInSection > 0
+            ? ((completedInSection / totalInSection) * 100).toFixed(0)
+            : 0;
 
         const sectionStats = document.createElement('span');
         sectionStats.className = 'section-stats';
@@ -453,43 +487,64 @@ function renderLectures(lectures) {
         sectionTitle.appendChild(sectionStats);
         sectionDiv.appendChild(sectionTitle);
 
-        // 강의 목록
-        section.lectures.forEach(lecture => {
-            const lectureDiv = document.createElement('div');
-            lectureDiv.className = 'lecture-item';
-            if (lecture.is_completed) {
-                lectureDiv.classList.add('completed');
+        // 챕터별 렌더링
+        Object.keys(section.chapters).sort((a, b) => {
+            if (a === 'no-chapter') return -1;
+            if (b === 'no-chapter') return 1;
+            return parseInt(a) - parseInt(b);
+        }).forEach(chapterKey => {
+            const chapter = section.chapters[chapterKey];
+
+            // 챕터가 있는 경우 챕터 제목 표시
+            if (chapter.number !== null) {
+                const chapterDiv = document.createElement('div');
+                chapterDiv.className = 'chapter-group';
+
+                const chapterTitle = document.createElement('div');
+                chapterTitle.className = 'chapter-title';
+                chapterTitle.textContent = `📖 챕터 ${chapter.number}. ${chapter.title || ''}`;
+                chapterDiv.appendChild(chapterTitle);
+                sectionDiv.appendChild(chapterDiv);
             }
 
-            // 강의 번호
-            if (lecture.lecture_number) {
-                const lectureNumber = document.createElement('span');
-                lectureNumber.className = 'lecture-number';
-                lectureNumber.textContent = `${lecture.lecture_number}.`;
-                lectureDiv.appendChild(lectureNumber);
-            }
+            // 강의 목록 렌더링
+            chapter.lectures.forEach(lecture => {
+                const lectureDiv = document.createElement('div');
+                lectureDiv.className = 'lecture-item';
+                if (lecture.is_completed) {
+                    lectureDiv.classList.add('completed');
+                }
 
-            // 강의 제목
-            const lectureTitle = document.createElement('span');
-            lectureTitle.className = 'lecture-title';
-            lectureTitle.textContent = lecture.lecture_title;
-            lectureDiv.appendChild(lectureTitle);
+                // 강의 번호
+                if (lecture.lecture_number) {
+                    const lectureNumber = document.createElement('span');
+                    lectureNumber.className = 'lecture-number';
+                    lectureNumber.textContent = `${lecture.lecture_number}.`;
+                    lectureDiv.appendChild(lectureNumber);
+                }
 
-            // 강의 시간
-            const lectureTime = document.createElement('span');
-            lectureTime.className = 'lecture-time';
-            lectureTime.textContent = formatMinutesToTime(lecture.lecture_time || 0);
-            lectureDiv.appendChild(lectureTime);
+                // 강의 제목
+                const lectureTitle = document.createElement('span');
+                lectureTitle.className = 'lecture-title';
+                lectureTitle.textContent = lecture.lecture_title;
+                lectureDiv.appendChild(lectureTitle);
 
-            // 완료 표시
-            if (lecture.is_completed) {
-                const completedBadge = document.createElement('span');
-                completedBadge.className = 'lecture-completed';
-                completedBadge.textContent = '✓';
-                lectureDiv.appendChild(completedBadge);
-            }
+                // 강의 시간
+                const lectureTime = document.createElement('span');
+                lectureTime.className = 'lecture-time';
+                lectureTime.textContent = formatMinutesToTime(lecture.lecture_time || 0);
+                lectureDiv.appendChild(lectureTime);
 
-            sectionDiv.appendChild(lectureDiv);
+                // 완료 표시
+                if (lecture.is_completed) {
+                    const completedBadge = document.createElement('span');
+                    completedBadge.className = 'lecture-completed';
+                    completedBadge.textContent = '✓';
+                    lectureDiv.appendChild(completedBadge);
+                }
+
+                sectionDiv.appendChild(lectureDiv);
+            });
         });
 
         container.appendChild(sectionDiv);
