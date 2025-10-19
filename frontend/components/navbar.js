@@ -11,6 +11,7 @@ function renderNavbar(activePage = '') {
         <ul class="navbar-menu">
             <li><a href="/" class="${activePage === 'dashboard' ? 'active' : ''}">대시보드</a></li>
             <li><a href="/courses" class="${activePage === 'courses' ? 'active' : ''}">강의 목록</a></li>
+            <li><a href="/target" class="${activePage === 'target' ? 'active' : ''}">목표 강의</a></li>
             <li><a href="/progress" class="${activePage === 'progress' ? 'active' : ''}">진척률 통계</a></li>
         </ul>
     </nav>

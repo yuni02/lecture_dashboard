@@ -8,6 +8,7 @@ let currentPage = 1;
 let itemsPerPage = 20;
 let currentSort = 'progress_rate_desc';
 let searchQuery = '';
+let currentCourseIdForTarget = null;
 
 // 페이지 로드 시 데이터 가져오기
 document.addEventListener('DOMContentLoaded', () => {
@@ -263,6 +264,9 @@ async function openCourseModal(courseId) {
         showLoading('강의 상세 정보를 불러오는 중...');
         const course = await fetch(`${API_BASE}/api/courses/${courseId}`).then(res => res.json());
 
+        // 현재 course_id 저장
+        currentCourseIdForTarget = courseId;
+
         document.getElementById('modal-title').textContent = course.course_title;
         document.getElementById('modal-progress').textContent = course.progress_rate || 0;
         document.getElementById('modal-study-time').textContent =
@@ -412,7 +416,118 @@ function setupModal() {
         if (event.target === modal) {
             modal.style.display = 'none';
         }
+        const setTargetModal = document.getElementById('set-target-modal');
+        if (event.target === setTargetModal) {
+            setTargetModal.style.display = 'none';
+        }
     };
+
+    // 목표 설정 폼 제출 이벤트
+    const setTargetForm = document.getElementById('set-target-form');
+    setTargetForm.onsubmit = async (e) => {
+        e.preventDefault();
+        await submitTargetCourse();
+    };
+}
+
+// 목표 설정 모달 열기
+function openSetTargetModal() {
+    // 현재 열려있는 강의 모달에서 강의 정보 가져오기
+    const courseTitle = document.getElementById('modal-title').textContent;
+    currentCourseIdForTarget = parseInt(document.getElementById('modal-link').href.split('/').pop());
+
+    // 목표 설정 모달에 강의명 표시
+    document.getElementById('set-target-course-title').textContent = courseTitle;
+
+    // 오늘 날짜를 기본값으로 설정
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('target-start-date-input').value = today;
+
+    // 한 달 후를 기본 완료일로 설정
+    const oneMonthLater = new Date();
+    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+    document.getElementById('target-completion-date-input').value = oneMonthLater.toISOString().split('T')[0];
+
+    // 모달 표시
+    document.getElementById('set-target-modal').style.display = 'block';
+}
+
+// 목표 설정 모달 닫기
+function closeSetTargetModal() {
+    document.getElementById('set-target-modal').style.display = 'none';
+    document.getElementById('set-target-form').reset();
+}
+
+// 목표 강의 설정 제출
+async function submitTargetCourse() {
+    if (!currentCourseIdForTarget) {
+        alert('강의 정보를 찾을 수 없습니다.');
+        return;
+    }
+
+    const startDate = document.getElementById('target-start-date-input').value;
+    const completionDate = document.getElementById('target-completion-date-input').value;
+
+    if (!startDate || !completionDate) {
+        alert('시작일과 완료일을 모두 입력해주세요.');
+        return;
+    }
+
+    if (new Date(completionDate) <= new Date(startDate)) {
+        alert('완료일은 시작일보다 이후여야 합니다.');
+        return;
+    }
+
+    try {
+        showLoading('목표 설정 중...');
+
+        const response = await fetch(`${API_BASE}/api/courses/${currentCourseIdForTarget}/set-target`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                target_start_date: startDate,
+                target_completion_date: completionDate
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to set target course');
+        }
+
+        const result = await response.json();
+
+        // 성공 메시지
+        const studyDays = result.study_days;
+        const dailyMinutes = result.target_daily_minutes;
+        const dailyHours = Math.floor(dailyMinutes / 60);
+        const dailyMins = dailyMinutes % 60;
+
+        let timeStr = '';
+        if (dailyHours > 0) {
+            timeStr += `${dailyHours}시간 `;
+        }
+        if (dailyMins > 0) {
+            timeStr += `${dailyMins}분`;
+        }
+
+        alert(`목표가 설정되었습니다!\n\n기간: ${studyDays}일\n일일 목표: ${timeStr}`);
+
+        // 모달 닫기
+        closeSetTargetModal();
+        document.getElementById('course-modal').style.display = 'none';
+
+        // 목록 새로고침 (목표 표시를 위해)
+        loadCoursesData();
+
+    } catch (error) {
+        console.error('목표 설정 실패:', error);
+        alert(error.message || '목표 설정에 실패했습니다.');
+    } finally {
+        hideLoading();
+    }
 }
 
 // 분을 시간 형식으로 변환

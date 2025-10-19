@@ -42,6 +42,12 @@ async def progress_page():
     frontend_path = os.path.join(os.path.dirname(__file__), '../frontend/progress.html')
     return FileResponse(frontend_path)
 
+@app.get("/target")
+async def target_page():
+    """목표 강의 페이지"""
+    frontend_path = os.path.join(os.path.dirname(__file__), '../frontend/target.html')
+    return FileResponse(frontend_path)
+
 @app.get("/api/health")
 async def health_check():
     """헬스 체크"""

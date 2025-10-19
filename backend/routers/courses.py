@@ -18,6 +18,12 @@ class ManuallyCompletedUpdate(BaseModel):
     is_manually_completed: bool
 
 
+class TargetCourseUpdate(BaseModel):
+    """목표 강의 설정 요청"""
+    target_start_date: str  # YYYY-MM-DD 형식
+    target_completion_date: str  # YYYY-MM-DD 형식
+
+
 @router.get("")
 async def get_courses(db = Depends(get_db)) -> List[Dict[str, Any]]:
     """모든 강의 목록 조회"""
@@ -123,6 +129,86 @@ async def get_courses(db = Depends(get_db)) -> List[Dict[str, Any]]:
         cursor.close()
 
         return courses
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.get("/target")
+async def get_target_course(db = Depends(get_db)) -> Dict[str, Any]:
+    """현재 목표 강의 조회"""
+    try:
+        cursor = db.cursor()
+
+        query = """
+            SELECT
+                course_id,
+                course_title,
+                url,
+                target_start_date,
+                target_completion_date,
+                target_daily_minutes,
+                target_set_at
+            FROM courses
+            WHERE is_target_course = 1
+            LIMIT 1
+        """
+
+        cursor.execute(query)
+        target_course = cursor.fetchone()
+
+        if not target_course:
+            cursor.close()
+            return {"has_target": False, "target_course": None}
+
+        course_id = target_course['course_id']
+
+        # lectures 테이블에서 시간 계산
+        lectures_query = """
+            SELECT
+                lecture_time,
+                is_completed
+            FROM lectures
+            WHERE course_id = %s
+        """
+        cursor.execute(lectures_query, (course_id,))
+        lectures = cursor.fetchall()
+
+        total_lecture_time = 0
+        study_time = 0
+        completed_count = 0
+        total_count = len(lectures)
+
+        for lecture in lectures:
+            lecture_time = float(lecture.get('lecture_time') or 0)
+            total_lecture_time += lecture_time
+            if lecture.get('is_completed'):
+                study_time += lecture_time
+                completed_count += 1
+
+        # 진도율 계산
+        progress_rate = round((completed_count / total_count * 100) if total_count > 0 else 0, 1)
+
+        # 남은 시간 계산
+        remaining_time = total_lecture_time - study_time
+
+        # 데이터 추가
+        target_course['study_time'] = study_time
+        target_course['total_lecture_time'] = total_lecture_time
+        target_course['remaining_time'] = remaining_time
+        target_course['progress_rate'] = progress_rate
+
+        # Date 변환
+        if target_course.get('target_start_date'):
+            target_course['target_start_date'] = target_course['target_start_date'].isoformat()
+        if target_course.get('target_completion_date'):
+            target_course['target_completion_date'] = target_course['target_completion_date'].isoformat()
+        if target_course.get('target_set_at'):
+            target_course['target_set_at'] = target_course['target_set_at'].isoformat()
+
+        cursor.close()
+
+        return {"has_target": True, "target_course": target_course}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -252,6 +338,170 @@ async def update_manually_completed(
             "course_id": course_id,
             "is_manually_completed": data.is_manually_completed,
             "message": f"강의 크롤링 {'제외' if data.is_manually_completed else '포함'} 처리되었습니다."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.post("/{course_id}/set-target")
+async def set_target_course(
+    course_id: int,
+    data: TargetCourseUpdate,
+    db = Depends(get_db)
+) -> Dict[str, Any]:
+    """목표 강의 설정 (기존 목표는 자동 해제)"""
+    try:
+        from datetime import datetime, timedelta
+
+        cursor = db.cursor()
+
+        # 강의 존재 확인
+        check_query = """
+            SELECT
+                course_id,
+                course_title
+            FROM courses
+            WHERE course_id = %s
+        """
+        cursor.execute(check_query, (course_id,))
+        course = cursor.fetchone()
+
+        if not course:
+            cursor.close()
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        # lectures 테이블에서 시간 계산
+        lectures_query = """
+            SELECT
+                lecture_time,
+                is_completed
+            FROM lectures
+            WHERE course_id = %s
+        """
+        cursor.execute(lectures_query, (course_id,))
+        lectures = cursor.fetchall()
+
+        total_time = 0
+        studied_time = 0
+
+        for lecture in lectures:
+            lecture_time = float(lecture.get('lecture_time') or 0)
+            total_time += lecture_time
+            if lecture.get('is_completed'):
+                studied_time += lecture_time
+
+        remaining_minutes = total_time - studied_time
+
+        # 날짜 파싱 및 유효성 검사
+        try:
+            start_date = datetime.strptime(data.target_start_date, '%Y-%m-%d').date()
+            completion_date = datetime.strptime(data.target_completion_date, '%Y-%m-%d').date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+        if completion_date <= start_date:
+            raise HTTPException(status_code=400, detail="Completion date must be after start date")
+
+        if remaining_minutes <= 0:
+            raise HTTPException(status_code=400, detail="This course is already completed")
+
+        # 학습 기간 계산 (일 단위)
+        study_days = (completion_date - start_date).days + 1
+
+        # 일일 목표 학습 시간 계산 (분 단위, 올림)
+        import math
+        target_daily_minutes = math.ceil(remaining_minutes / study_days)
+
+        # 기존 목표 강의 해제
+        clear_query = """
+            UPDATE courses
+            SET is_target_course = 0,
+                target_start_date = NULL,
+                target_completion_date = NULL,
+                target_daily_minutes = NULL,
+                target_set_at = NULL
+            WHERE is_target_course = 1
+        """
+        cursor.execute(clear_query)
+
+        # 새로운 목표 강의 설정
+        set_query = """
+            UPDATE courses
+            SET is_target_course = 1,
+                target_start_date = %s,
+                target_completion_date = %s,
+                target_daily_minutes = %s,
+                target_set_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE course_id = %s
+        """
+        cursor.execute(set_query, (data.target_start_date, data.target_completion_date, target_daily_minutes, course_id))
+        db.commit()
+
+        cursor.close()
+
+        return {
+            "success": True,
+            "course_id": course_id,
+            "course_title": course.get('course_title'),
+            "target_start_date": data.target_start_date,
+            "target_completion_date": data.target_completion_date,
+            "remaining_minutes": remaining_minutes,
+            "study_days": study_days,
+            "target_daily_minutes": target_daily_minutes,
+            "message": "목표 강의가 설정되었습니다."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@router.delete("/{course_id}/clear-target")
+async def clear_target_course(
+    course_id: int,
+    db = Depends(get_db)
+) -> Dict[str, Any]:
+    """목표 강의 해제"""
+    try:
+        cursor = db.cursor()
+
+        # 강의가 목표 강의인지 확인
+        check_query = "SELECT course_id, course_title FROM courses WHERE course_id = %s AND is_target_course = 1"
+        cursor.execute(check_query, (course_id,))
+        course = cursor.fetchone()
+
+        if not course:
+            cursor.close()
+            raise HTTPException(status_code=404, detail="This course is not set as target")
+
+        # 목표 해제
+        clear_query = """
+            UPDATE courses
+            SET is_target_course = 0,
+                target_start_date = NULL,
+                target_completion_date = NULL,
+                target_daily_minutes = NULL,
+                target_set_at = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE course_id = %s
+        """
+        cursor.execute(clear_query, (course_id,))
+        db.commit()
+
+        cursor.close()
+
+        return {
+            "success": True,
+            "course_id": course_id,
+            "course_title": course.get('course_title'),
+            "message": "목표 강의가 해제되었습니다."
         }
 
     except HTTPException:

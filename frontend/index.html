@@ -54,6 +54,39 @@
             </div>
         </section>
 
+        <!-- 목표 강의 섹션 -->
+        <section class="target-course-section" id="target-course-section" style="display: none;">
+            <h2>🎯 목표 강의</h2>
+            <div class="target-course-card">
+                <div class="target-course-header">
+                    <h3 id="target-course-title">-</h3>
+                    <button class="clear-target-btn" onclick="clearTargetCourse()">목표 해제</button>
+                </div>
+                <div class="target-course-info">
+                    <div class="target-info-item">
+                        <span class="target-label">진도율:</span>
+                        <span class="target-value" id="target-progress">-</span>
+                    </div>
+                    <div class="target-info-item">
+                        <span class="target-label">시작일:</span>
+                        <span class="target-value" id="target-start-date">-</span>
+                    </div>
+                    <div class="target-info-item">
+                        <span class="target-label">완료일:</span>
+                        <span class="target-value" id="target-completion-date">-</span>
+                    </div>
+                    <div class="target-info-item">
+                        <span class="target-label">남은 시간:</span>
+                        <span class="target-value" id="target-remaining-time">-</span>
+                    </div>
+                    <div class="target-info-item highlight">
+                        <span class="target-label">일일 목표:</span>
+                        <span class="target-value" id="target-daily-minutes">-</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 완료 예상 시간 -->
         <section class="completion-estimate">
             <h2>📅 학습 완료 예상</h2>

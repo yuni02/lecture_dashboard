@@ -21,10 +21,11 @@ async function loadDashboardData() {
         showLoading('대시보드 데이터를 불러오는 중...');
 
         // 병렬로 데이터 가져오기
-        const [courses, summary, completion] = await Promise.all([
+        const [courses, summary, completion, targetData] = await Promise.all([
             fetch(`${API_BASE}/api/courses`).then(res => res.json()),
             fetch(`${API_BASE}/api/stats/summary`).then(res => res.json()),
-            fetch(`${API_BASE}/api/stats/completion`).then(res => res.json())
+            fetch(`${API_BASE}/api/stats/completion`).then(res => res.json()),
+            fetch(`${API_BASE}/api/courses/target`).then(res => res.json())
         ]);
 
         // 통계 카드 업데이트
@@ -32,6 +33,9 @@ async function loadDashboardData() {
 
         // 완료 예상 업데이트
         updateCompletionEstimate(completion);
+
+        // 목표 강의 업데이트
+        updateTargetCourse(targetData);
 
         // 강의 목록 렌더링
         renderCourses(courses);
@@ -70,6 +74,85 @@ function updateCompletionEstimate(completion) {
         completion.days_3h_per_day ? formatDaysToYearMonthDay(completion.days_3h_per_day) : '-';
     document.getElementById('days-5h').textContent =
         completion.days_5h_per_day ? formatDaysToYearMonthDay(completion.days_5h_per_day) : '-';
+}
+
+// 목표 강의 업데이트
+function updateTargetCourse(targetData) {
+    const section = document.getElementById('target-course-section');
+
+    if (!targetData.has_target || !targetData.target_course) {
+        section.style.display = 'none';
+        return;
+    }
+
+    const course = targetData.target_course;
+
+    // 섹션 표시
+    section.style.display = 'block';
+
+    // 제목
+    document.getElementById('target-course-title').textContent = course.course_title || '-';
+
+    // 진도율
+    document.getElementById('target-progress').textContent =
+        `${course.progress_rate || 0}%`;
+
+    // 시작일
+    document.getElementById('target-start-date').textContent =
+        course.target_start_date || '-';
+
+    // 완료일
+    document.getElementById('target-completion-date').textContent =
+        course.target_completion_date || '-';
+
+    // 남은 시간
+    document.getElementById('target-remaining-time').textContent =
+        formatMinutesToTime(course.remaining_time || 0);
+
+    // 일일 목표
+    document.getElementById('target-daily-minutes').textContent =
+        formatMinutesToTime(course.target_daily_minutes || 0);
+}
+
+// 목표 강의 해제
+async function clearTargetCourse() {
+    if (!confirm('목표 강의를 해제하시겠습니까?')) {
+        return;
+    }
+
+    try {
+        showLoading('목표 해제 중...');
+
+        // 현재 목표 강의 ID 가져오기
+        const targetData = await fetch(`${API_BASE}/api/courses/target`).then(res => res.json());
+
+        if (!targetData.has_target) {
+            alert('설정된 목표 강의가 없습니다.');
+            return;
+        }
+
+        const courseId = targetData.target_course.course_id;
+
+        const response = await fetch(`${API_BASE}/api/courses/${courseId}/clear-target`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to clear target course');
+        }
+
+        const result = await response.json();
+        alert(result.message);
+
+        // 대시보드 새로고침
+        loadDashboardData();
+
+    } catch (error) {
+        console.error('목표 해제 실패:', error);
+        alert('목표 해제에 실패했습니다.');
+    } finally {
+        hideLoading();
+    }
 }
 
 // 강의 목록 렌더링 (테이블 형식)
