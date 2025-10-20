@@ -18,6 +18,8 @@
 - 📈 진척률 통계
 - 🎯 완강 목표 설정 및 추적
 - 🔍 강의/강의 내용 검색
+- 👁️ 대시보드 표시/숨김 토글
+- ✅ 강의별 완료 체크 (일괄 저장)
 
 ## 프로젝트 구조
 
@@ -26,6 +28,7 @@ lecture_dashboard/
 ├── app/
 │   ├── api/              # API Routes (백엔드)
 │   │   ├── courses/      # 강의 관련 API
+│   │   ├── lectures/     # 강의 완료 상태 업데이트 API
 │   │   ├── stats/        # 통계 API
 │   │   └── health/       # 헬스체크
 │   ├── courses/          # 강의 목록 페이지
@@ -34,6 +37,9 @@ lecture_dashboard/
 │   ├── layout.tsx        # 공통 레이아웃
 │   └── page.tsx          # 대시보드 페이지
 ├── components/           # React 컴포넌트
+│   ├── Navbar.tsx        # 공통 네비게이션
+│   ├── Loading.tsx       # 로딩 컴포넌트
+│   └── CourseDetailModal.tsx  # 강의 상세 모달
 ├── lib/                  # 유틸리티 (DB 연결 등)
 ├── types/                # TypeScript 타입 정의
 └── .env.local           # 환경 변수
@@ -82,8 +88,13 @@ npm start
 - `GET /api/courses/:id` - 특정 강의 상세 정보 조회
 - `GET /api/courses/target` - 목표 강의 조회
 - `PATCH /api/courses/:id/manually-completed` - 수동 완료 상태 변경
+- `PATCH /api/courses/:id/visibility` - 대시보드 표시/숨김 토글
 - `POST /api/courses/:id/set-target` - 목표 강의 설정
 - `DELETE /api/courses/:id/clear-target` - 목표 강의 해제
+
+### Lectures API
+
+- `PATCH /api/lectures/:id` - 강의 완료 상태 업데이트
 
 ### Stats API
 
@@ -96,7 +107,7 @@ npm start
 ## 페이지
 
 - `/` - 대시보드 (통계 요약 및 강의 목록)
-- `/courses` - 강의 목록
+- `/courses` - 강의 목록 (표시/숨김 토글 기능)
 - `/progress` - 진척률 통계
 - `/target` - 완강 목표 관리
 
@@ -105,14 +116,36 @@ npm start
 프로젝트는 다음 테이블을 사용합니다:
 
 - `courses` - 강의 정보
+  - `is_visible_on_dashboard` - 대시보드 표시 여부 (boolean)
 - `lectures` - 강의 목차 및 진도 정보
+  - `is_completed` - 완료 여부 (boolean)
+  - `completed_at` - 완료 시간 (timestamp)
 
 ## 마이그레이션 히스토리
 
-v2.0.0: FastAPI + HTML/JS → Next.js 풀스택으로 마이그레이션
-- 백엔드: FastAPI (Python) → Next.js API Routes (TypeScript)
-- 프론트엔드: HTML/Vanilla JS → React + TypeScript
-- 단일 프레임워크로 통합하여 개발 및 배포 간소화
+### v2.0.0: FastAPI + HTML/JS → Next.js 풀스택 마이그레이션
+- **Backend**: FastAPI (Python) → Next.js API Routes (TypeScript)
+- **Frontend**: HTML/Vanilla JS → React + TypeScript
+- **스타일링**: 기존 CSS → Tailwind CSS
+- **이점**: 단일 프레임워크로 통합하여 개발 및 배포 간소화
+
+### v1.0.0: FastAPI + Vanilla JS (레거시)
+- Backend: FastAPI, Python 3.8+
+- Frontend: HTML5, CSS3, Vanilla JavaScript
+- Database: MySQL 8.0
+- Server: Uvicorn (ASGI)
+- 배포: Docker / GitHub Actions
+
+## 특징
+
+- ✅ TypeScript로 타입 안정성 확보
+- ✅ Server Components와 Client Components 분리
+- ✅ API Routes를 통한 RESTful API 구현
+- ✅ Tailwind CSS를 활용한 모던 UI/UX
+- ✅ 반응형 레이아웃 (모바일/태블릿/데스크톱)
+- ✅ MySQL 연결 풀링을 통한 효율적인 DB 관리
+- ✅ 강의 상세 모달에서 일괄 완료 처리
+- ✅ 디버깅을 위한 콘솔 로그 추가
 
 ## License
 

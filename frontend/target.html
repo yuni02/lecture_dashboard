@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>목표 강의 - FastCampus Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/components/navbar.js"></script>
+    <script src="/static/components/loading.js"></script>
+</head>
+<body>
+    <!-- 네비게이션 바 -->
+    <div id="navbar-container" data-page="target"></div>
+
+    <div class="container">
+        <!-- 헤더 -->
+        <header>
+            <h1>🎯 목표 강의</h1>
+            <p class="subtitle">완료 목표 강의 관리 및 진행 상황</p>
+        </header>
+
+        <!-- 목표 강의 없을 때 -->
+        <section id="no-target-section" class="no-target-section" style="display: none;">
+            <div class="target-setup-card">
+                <div class="empty-icon">🎯</div>
+                <h2>목표 강의 설정</h2>
+                <p>완료하고 싶은 강의를 선택하고 목표 기간을 설정하세요</p>
+
+                <form id="target-setup-form" class="target-setup-form">
+                    <div class="form-group">
+                        <label for="course-select">
+                            <span class="label-icon">📚</span>
+                            강의 선택
+                        </label>
+                        <select id="course-select" required>
+                            <option value="">강의를 선택하세요</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start-date-input">
+                                <span class="label-icon">📅</span>
+                                시작일
+                            </label>
+                            <input type="date" id="start-date-input" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="completion-date-input">
+                                <span class="label-icon">🏁</span>
+                                완료 목표일
+                            </label>
+                            <input type="date" id="completion-date-input" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-large">
+                        목표 설정하기
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 목표 강의 있을 때 -->
+        <section id="target-course-section" class="target-course-detail" style="display: none;">
+            <!-- 기본 정보 카드 -->
+            <div class="target-main-card">
+                <div class="target-main-header">
+                    <div>
+                        <h2 id="target-course-title">-</h2>
+                        <a id="target-course-link" href="#" target="_blank" class="course-link">강의 페이지 열기 →</a>
+                    </div>
+                    <button class="clear-target-btn" onclick="clearTargetCourse()">목표 해제</button>
+                </div>
+
+                <!-- 진행 상황 -->
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span>전체 진도율</span>
+                        <span id="target-progress-text" class="progress-value">0%</span>
+                    </div>
+                    <div class="progress-bar-large">
+                        <div id="target-progress-bar" class="progress-fill-large" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- 통계 그리드 -->
+                <div class="target-stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-content">
+                            <div class="stat-label">시작일</div>
+                            <div class="stat-value" id="target-start-date">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">🏁</div>
+                        <div class="stat-content">
+                            <div class="stat-label">완료 목표일</div>
+                            <div class="stat-value" id="target-completion-date">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-content">
+                            <div class="stat-label">수강 시간</div>
+                            <div class="stat-value" id="target-study-time">-</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">⏳</div>
+                        <div class="stat-content">
+                            <div class="stat-label">남은 시간</div>
+                            <div class="stat-value" id="target-remaining-time">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 일일 목표 (강조) -->
+                <div class="daily-goal-card">
+                    <div class="daily-goal-icon">🎯</div>
+                    <div class="daily-goal-content">
+                        <div class="daily-goal-label">일일 목표 학습 시간</div>
+                        <div class="daily-goal-value" id="target-daily-minutes">-</div>
+                        <div class="daily-goal-subtitle" id="target-days-info">-</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 푸터 -->
+        <footer>
+            <p>데이터 업데이트: <span id="last-update">-</span></p>
+            <p>Made with FastAPI + Vanilla JS</p>
+        </footer>
+    </div>
+
+    <script src="/static/target.js"></script>
+</body>
+</html>
