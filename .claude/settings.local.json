@@ -22,7 +22,12 @@
       "Bash(cat frontend-react/package.json)",
       "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --import-alias \"@/*\" --eslint --turbopack)",
       "Read(//private/tmp/**)",
-      "Bash(npm run dev)"
+      "Bash(npm run dev)",
+      "Bash(git fetch origin main)",
+      "Bash(git pull origin main --no-rebase)",
+      "Bash(git pull origin main --allow-unrelated-histories --no-edit)",
+      "Bash(git add .gitignore README.md)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
