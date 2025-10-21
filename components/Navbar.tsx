@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -12,8 +13,15 @@ export default function Navbar() {
     <nav className="bg-gray-800 text-white shadow-lg">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-xl font-bold hover:text-blue-300 transition-colors">
-            FastCampus Dashboard
+          <Link href="/" className="flex items-center gap-3 text-xl font-bold hover:text-blue-300 transition-colors">
+            <Image
+              src="/icons/fastcampus_logo.svg"
+              alt="FastCampus Logo"
+              width={32}
+              height={32}
+              className="w-8 h-8"
+            />
+            <span>FastCampus Dashboard</span>
           </Link>
           <div className="flex space-x-4">
             <Link

@@ -15,6 +15,7 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
   const [saving, setSaving] = useState(false);
   const [changedLectures, setChangedLectures] = useState<Set<number>>(new Set());
   const [localCompletionStates, setLocalCompletionStates] = useState<Record<number, boolean>>({});
+  const [activeTab, setActiveTab] = useState<string>('');
 
   useEffect(() => {
     fetchCourseDetail();
@@ -34,6 +35,12 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
       console.log('Full Data:', data);
 
       setCourse(data);
+
+      // 첫 번째 Part를 기본 활성 탭으로 설정
+      if (data.lectures && data.lectures.length > 0) {
+        const firstPart = data.lectures[0].section_title || '기타';
+        setActiveTab(firstPart);
+      }
     } catch (error) {
       console.error('강의 상세 정보 로드 실패:', error);
     } finally {
@@ -204,30 +211,35 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
               </div>
             </div>
 
-            {/* 강의 목록 */}
-            <div className="p-6 overflow-y-auto max-h-[50vh]">
-              <h3 className="text-lg font-bold mb-4">강의 목록</h3>
+            {/* Part 탭 및 강의 목록 */}
+            <div className="flex flex-col h-[60vh]">
+              {/* Part 탭 */}
+              <div className="border-b overflow-x-auto">
+                <div className="flex px-6 pt-4">
+                  {groupedLectures && Object.keys(groupedLectures).map((partTitle) => (
+                    <button
+                      key={partTitle}
+                      onClick={() => setActiveTab(partTitle)}
+                      className={`px-6 py-3 font-medium text-sm whitespace-nowrap transition-colors border-b-2 ${
+                        activeTab === partTitle
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
+                      }`}
+                    >
+                      {partTitle}
+                      <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded-full">
+                        {groupedLectures[partTitle].length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              {groupedLectures && Object.entries(groupedLectures).map(([sectionTitle, lectures]) => {
-                // 디버깅: 섹션별 강의 정보 확인
-                console.log(`[${sectionTitle}] 강의 수:`, lectures.length);
-                console.log(`[${sectionTitle}] 강의 데이터:`, lectures);
-
-                return (
-                <div key={sectionTitle} className="mb-6">
-                  <h4 className="font-semibold text-gray-800 mb-3 bg-gray-100 p-2 rounded">
-                    {sectionTitle}
-                  </h4>
+              {/* 활성 탭의 강의 목록 */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {groupedLectures && groupedLectures[activeTab] && (
                   <div className="space-y-2">
-                    {lectures.map((lecture, idx) => {
-                      // 디버깅: 개별 강의 정보 (필요시 주석 해제)
-                      // console.log(`강의 ${idx + 1}:`, {
-                      //   id: lecture.lecture_id,
-                      //   title: lecture.lecture_title,
-                      //   completed: lecture.is_completed,
-                      //   time: lecture.lecture_time
-                      // });
-
+                    {groupedLectures[activeTab].map((lecture, idx) => {
                       const lectureId = lecture.lecture_id!;
                       const currentStatus = localCompletionStates[lectureId] !== undefined
                         ? localCompletionStates[lectureId]
@@ -235,49 +247,48 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
                       const isChanged = changedLectures.has(lectureId);
 
                       return (
-                      <div
-                        key={lecture.lecture_id || idx}
-                        className={`flex items-start justify-between p-3 rounded transition-colors ${
-                          currentStatus ? 'bg-green-50' : 'bg-white border'
-                        } ${isChanged ? 'border-2 border-yellow-400' : ''}`}
-                      >
-                        <div className="flex items-start flex-1">
-                          <input
-                            type="checkbox"
-                            checked={currentStatus}
-                            onChange={() => handleCheckboxChange(lectureId, currentStatus)}
-                            disabled={saving || !lecture.lecture_id}
-                            className="mt-1 mr-3 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer disabled:cursor-not-allowed"
-                          />
-                          <div className="flex-1">
-                            {lecture.chapter_title && (
-                              <div className="text-xs text-gray-500 mb-1">
-                                {lecture.chapter_title}
+                        <div
+                          key={lecture.lecture_id || idx}
+                          className={`flex items-start justify-between p-3 rounded transition-colors ${
+                            currentStatus ? 'bg-green-50' : 'bg-white border'
+                          } ${isChanged ? 'border-2 border-yellow-400' : ''}`}
+                        >
+                          <div className="flex items-start flex-1">
+                            <input
+                              type="checkbox"
+                              checked={currentStatus}
+                              onChange={() => handleCheckboxChange(lectureId, currentStatus)}
+                              disabled={saving || !lecture.lecture_id}
+                              className="mt-1 mr-3 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer disabled:cursor-not-allowed"
+                            />
+                            <div className="flex-1">
+                              {lecture.chapter_title && (
+                                <div className="text-xs text-gray-500 mb-1">
+                                  {lecture.chapter_title}
+                                </div>
+                              )}
+                              <div className={`text-sm ${
+                                currentStatus ? 'text-gray-600 line-through' : 'text-gray-800'
+                              }`}>
+                                {lecture.lecture_title}
                               </div>
-                            )}
-                            <div className={`text-sm ${
-                              currentStatus ? 'text-gray-600 line-through' : 'text-gray-800'
-                            }`}>
-                              {lecture.lecture_title}
                             </div>
                           </div>
+                          <div className="text-xs text-gray-500 ml-4 flex-shrink-0">
+                            {lecture.lecture_time ? `${Math.round(lecture.lecture_time)}분` : '-'}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 ml-4 flex-shrink-0">
-                          {lecture.lecture_time ? `${Math.round(lecture.lecture_time)}분` : '-'}
-                        </div>
-                      </div>
                       );
                     })}
                   </div>
-                </div>
-                );
-              })}
+                )}
 
-              {(!course.lectures || course.lectures.length === 0) && (
-                <div className="text-center py-8 text-gray-500">
-                  강의 목록이 없습니다.
-                </div>
-              )}
+                {(!course.lectures || course.lectures.length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    강의 목록이 없습니다.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 저장/취소 버튼 */}
