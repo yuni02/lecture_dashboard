@@ -52,7 +52,7 @@ export async function GET() {
         const timeStatsByCourse: Record<number, TimeStats> = {};
 
         lectures.forEach((lecture: RowDataPacket) => {
-          const courseId = lecture.course_id;
+          const courseId = lecture.course_id as number;
 
           if (!lecturesByCourse[courseId]) {
             lecturesByCourse[courseId] = [];
@@ -82,7 +82,7 @@ export async function GET() {
         });
 
         const result: Course[] = courses.map((course: RowDataPacket) => {
-          const courseId = course.course_id;
+          const courseId = course.course_id as number;
           const stats = timeStatsByCourse[courseId] || {
             total_lecture_time: 0,
             study_time: 0,

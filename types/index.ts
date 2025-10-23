@@ -16,8 +16,8 @@ export interface Course {
   course_id: number;
   course_title: string;
   url: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   is_manually_completed: boolean;
   is_visible_on_dashboard?: boolean;
   lectures?: Lecture[];
