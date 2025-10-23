@@ -22,11 +22,11 @@ export async function GET() {
         ORDER BY year_week DESC
       `);
 
-      const weeklyData: WeeklyProgress[] = results.map((row: any) => ({
-        year_week: row.year_week || 0,
-        week_start: row.week_start ? new Date(row.week_start).toISOString().split('T')[0] : '',
-        completed_lectures: row.completed_lectures || 0,
-        study_time_minutes: parseFloat(row.study_time_minutes || 0),
+      const weeklyData: WeeklyProgress[] = results.map((row: RowDataPacket) => ({
+        year_week: (row.year_week as number) || 0,
+        week_start: row.week_start ? new Date(row.week_start as Date).toISOString().split('T')[0] : '',
+        completed_lectures: (row.completed_lectures as number) || 0,
+        study_time_minutes: parseFloat((row.study_time_minutes as string) || '0'),
       }));
 
       return NextResponse.json({ weekly_progress: weeklyData });

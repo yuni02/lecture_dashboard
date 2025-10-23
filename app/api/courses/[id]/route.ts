@@ -65,8 +65,8 @@ export async function GET(
       let completedCount = 0;
       const totalCount = lectures.length;
 
-      const lectureList = lectures.map((lecture: any) => {
-        const lectureTime = parseFloat(lecture.lecture_time || 0);
+      const lectureList = lectures.map((lecture: RowDataPacket) => {
+        const lectureTime = parseFloat((lecture.lecture_time as string) || '0');
         totalLectureTime += lectureTime;
 
         if (lecture.is_completed) {
@@ -75,17 +75,17 @@ export async function GET(
         }
 
         return {
-          lecture_id: lecture.lecture_id,
-          course_id: lecture.course_id,
-          section_number: lecture.section_number,
-          section_title: lecture.section_title,
-          chapter_number: lecture.chapter_number,
-          chapter_title: lecture.chapter_title,
-          lecture_number: lecture.lecture_number,
-          lecture_title: lecture.lecture_title,
+          lecture_id: lecture.lecture_id as number,
+          course_id: lecture.course_id as number,
+          section_number: lecture.section_number as number,
+          section_title: lecture.section_title as string,
+          chapter_number: lecture.chapter_number as number,
+          chapter_title: lecture.chapter_title as string,
+          lecture_number: lecture.lecture_number as number,
+          lecture_title: lecture.lecture_title as string,
           lecture_time: lectureTime,
           is_completed: Boolean(lecture.is_completed),
-          sort_order: lecture.sort_order,
+          sort_order: lecture.sort_order as number,
         };
       });
 

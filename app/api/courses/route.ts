@@ -36,18 +36,30 @@ export async function GET() {
           ORDER BY course_id, sort_order
         `, [courseIds]);
 
-        const lecturesByCourse: Record<number, any[]> = {};
-        const timeStatsByCourse: Record<number, any> = {};
+        interface LectureInfo {
+          section_title: string;
+          lecture_title: string;
+        }
 
-        lectures.forEach((lecture: any) => {
+        interface TimeStats {
+          total_lecture_time: number;
+          study_time: number;
+          completed_count: number;
+          total_count: number;
+        }
+
+        const lecturesByCourse: Record<number, LectureInfo[]> = {};
+        const timeStatsByCourse: Record<number, TimeStats> = {};
+
+        lectures.forEach((lecture: RowDataPacket) => {
           const courseId = lecture.course_id;
 
           if (!lecturesByCourse[courseId]) {
             lecturesByCourse[courseId] = [];
           }
           lecturesByCourse[courseId].push({
-            section_title: lecture.section_title,
-            lecture_title: lecture.lecture_title,
+            section_title: lecture.section_title as string,
+            lecture_title: lecture.lecture_title as string,
           });
 
           if (!timeStatsByCourse[courseId]) {
@@ -59,7 +71,7 @@ export async function GET() {
             };
           }
 
-          const lectureTime = parseFloat(lecture.lecture_time || 0);
+          const lectureTime = parseFloat((lecture.lecture_time as string) || '0');
           timeStatsByCourse[courseId].total_lecture_time += lectureTime;
           timeStatsByCourse[courseId].total_count += 1;
 
@@ -69,7 +81,7 @@ export async function GET() {
           }
         });
 
-        const result: Course[] = courses.map((course: any) => {
+        const result: Course[] = courses.map((course: RowDataPacket) => {
           const courseId = course.course_id;
           const stats = timeStatsByCourse[courseId] || {
             total_lecture_time: 0,
@@ -84,10 +96,10 @@ export async function GET() {
 
           return {
             course_id: courseId,
-            course_title: course.course_title,
-            url: course.url,
-            created_at: course.created_at?.toISOString(),
-            updated_at: course.updated_at?.toISOString(),
+            course_title: course.course_title as string,
+            url: course.url as string,
+            created_at: (course.created_at as Date | undefined)?.toISOString(),
+            updated_at: (course.updated_at as Date | undefined)?.toISOString(),
             is_manually_completed: Boolean(course.is_manually_completed),
             is_visible_on_dashboard: Boolean(course.is_visible_on_dashboard),
             lectures: lecturesByCourse[courseId] || [],

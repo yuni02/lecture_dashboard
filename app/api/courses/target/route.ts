@@ -42,8 +42,8 @@ export async function GET() {
       let completedCount = 0;
       const totalCount = lectures.length;
 
-      lectures.forEach((lecture: any) => {
-        const lectureTime = parseFloat(lecture.lecture_time || 0);
+      lectures.forEach((lecture: RowDataPacket) => {
+        const lectureTime = parseFloat((lecture.lecture_time as string) || '0');
         totalLectureTime += lectureTime;
         if (lecture.is_completed) {
           studyTime += lectureTime;

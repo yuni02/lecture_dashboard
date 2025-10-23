@@ -21,10 +21,10 @@ export async function GET() {
         ORDER BY date DESC
       `);
 
-      const dailyData: DailyProgress[] = results.map((row: any) => ({
-        date: row.date ? new Date(row.date).toISOString().split('T')[0] : '',
-        completed_lectures: row.completed_lectures || 0,
-        study_time_minutes: parseFloat(row.study_time_minutes || 0),
+      const dailyData: DailyProgress[] = results.map((row: RowDataPacket) => ({
+        date: row.date ? new Date(row.date as Date).toISOString().split('T')[0] : '',
+        completed_lectures: (row.completed_lectures as number) || 0,
+        study_time_minutes: parseFloat((row.study_time_minutes as string) || '0'),
       }));
 
       return NextResponse.json({ daily_progress: dailyData });

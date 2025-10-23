@@ -35,11 +35,11 @@ export async function GET(
         ORDER BY date ASC
       `, [courseId, courseId]);
 
-      const progressData: CourseProgressHistory[] = results.map((row: any) => ({
-        date: row.date ? new Date(row.date).toISOString().split('T')[0] : '',
-        completed_lectures: row.completed_lectures || 0,
-        study_time_minutes: parseFloat(row.study_time_minutes || 0),
-        cumulative_completed: row.cumulative_completed || 0,
+      const progressData: CourseProgressHistory[] = results.map((row: RowDataPacket) => ({
+        date: row.date ? new Date(row.date as Date).toISOString().split('T')[0] : '',
+        completed_lectures: (row.completed_lectures as number) || 0,
+        study_time_minutes: parseFloat((row.study_time_minutes as string) || '0'),
+        cumulative_completed: (row.cumulative_completed as number) || 0,
       }));
 
       return NextResponse.json({

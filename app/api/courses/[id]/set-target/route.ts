@@ -54,8 +54,8 @@ export async function POST(
       let totalTime = 0;
       let studiedTime = 0;
 
-      lectures.forEach((lecture: any) => {
-        const lectureTime = parseFloat(lecture.lecture_time || 0);
+      lectures.forEach((lecture: RowDataPacket) => {
+        const lectureTime = parseFloat((lecture.lecture_time as string) || '0');
         totalTime += lectureTime;
         if (lecture.is_completed) {
           studiedTime += lectureTime;

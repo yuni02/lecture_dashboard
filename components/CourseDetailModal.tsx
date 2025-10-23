@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Course, Lecture } from '@/types';
 
 interface CourseDetailModalProps {
@@ -17,11 +17,7 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
   const [localCompletionStates, setLocalCompletionStates] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<string>('');
 
-  useEffect(() => {
-    fetchCourseDetail();
-  }, [courseId]);
-
-  const fetchCourseDetail = async () => {
+  const fetchCourseDetail = useCallback(async () => {
     try {
       const res = await fetch(`/api/courses/${courseId}`);
       const data = await res.json();
@@ -46,7 +42,11 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchCourseDetail();
+  }, [fetchCourseDetail]);
 
   const handleCheckboxChange = (lectureId: number, currentStatus: boolean) => {
     console.log('=== Checkbox Changed ===');
