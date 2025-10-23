@@ -7,9 +7,10 @@ interface CourseDetailModalProps {
   courseId: number;
   onClose: () => void;
   onUpdate?: () => void;
+  hideCompleted?: boolean;
 }
 
-export default function CourseDetailModal({ courseId, onClose, onUpdate }: CourseDetailModalProps) {
+export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCompleted = false }: CourseDetailModalProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,17 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
   useEffect(() => {
     fetchCourseDetail();
   }, [fetchCourseDetail]);
+
+  // 모달이 열렸을 때 배경 스크롤 비활성화
+  useEffect(() => {
+    // 모달 열릴 때
+    document.body.style.overflow = 'hidden';
+
+    // 모달 닫힐 때 (cleanup)
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleCheckboxChange = (lectureId: number, currentStatus: boolean) => {
     console.log('=== Checkbox Changed ===');
@@ -134,8 +146,18 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
     return `${hours}시간 ${mins}분`;
   };
 
-  // 섹션별로 강의 그룹화
+  // 섹션별로 강의 그룹화 및 필터링
   const groupedLectures = course?.lectures?.reduce((acc: Record<string, Lecture[]>, lecture) => {
+    // hideCompleted가 true면 완료된 강의 제외
+    const lectureId = lecture.lecture_id!;
+    const currentStatus = localCompletionStates[lectureId] !== undefined
+      ? localCompletionStates[lectureId]
+      : lecture.is_completed;
+
+    if (hideCompleted && currentStatus) {
+      return acc;
+    }
+
     const key = lecture.section_title || '기타';
     if (!acc[key]) {
       acc[key] = [];
@@ -147,19 +169,19 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="bg-gray-800 text-white p-6 flex justify-between items-start">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-2">{course?.course_title}</h2>
+        <div className="bg-gray-800 text-white p-4 md:p-6 flex justify-between items-start flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base md:text-lg font-bold mb-2 truncate">{course?.course_title}</h2>
             {course?.url && (
               <a
                 href={course.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-300 hover:underline text-sm"
+                className="text-blue-300 hover:underline text-xs md:text-sm inline-block"
               >
                 강의 페이지로 이동 →
               </a>
@@ -167,7 +189,7 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-gray-300 text-2xl font-bold ml-4"
+            className="text-white hover:text-gray-300 text-2xl font-bold ml-4 flex-shrink-0"
           >
             ×
           </button>
@@ -179,67 +201,33 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
           </div>
         ) : course ? (
           <>
-            {/* 통계 정보 */}
-            <div className="p-6 bg-gray-50 border-b">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-sm text-gray-600">진도율</div>
-                  <div className="text-2xl font-bold text-blue-600">{course.progress_rate}%</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">학습 시간</div>
-                  <div className="text-xl font-bold text-green-600">{formatTime(course.study_time)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">남은 시간</div>
-                  <div className="text-xl font-bold text-orange-600">{formatTime(course.remaining_time)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">총 강의 수</div>
-                  <div className="text-xl font-bold text-purple-600">{course.lectures?.length || 0}개</div>
-                </div>
-              </div>
-
-              {/* 진도바 */}
-              <div className="mt-4">
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-blue-600 h-3 rounded-full transition-all"
-                    style={{ width: `${course.progress_rate}%` }}
-                  />
-                </div>
+            {/* Part 탭 */}
+            <div className="border-b overflow-x-auto flex-shrink-0">
+              <div className="flex px-4 md:px-6 pt-4">
+                {groupedLectures && Object.keys(groupedLectures).map((partTitle) => (
+                  <button
+                    key={partTitle}
+                    onClick={() => setActiveTab(partTitle)}
+                    className={`px-4 md:px-6 py-3 font-medium text-xs md:text-sm whitespace-nowrap transition-colors border-b-2 ${
+                      activeTab === partTitle
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
+                    }`}
+                  >
+                    {partTitle}
+                    <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded-full">
+                      {groupedLectures[partTitle].length}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Part 탭 및 강의 목록 */}
-            <div className="flex flex-col h-[60vh]">
-              {/* Part 탭 */}
-              <div className="border-b overflow-x-auto">
-                <div className="flex px-6 pt-4">
-                  {groupedLectures && Object.keys(groupedLectures).map((partTitle) => (
-                    <button
-                      key={partTitle}
-                      onClick={() => setActiveTab(partTitle)}
-                      className={`px-6 py-3 font-medium text-sm whitespace-nowrap transition-colors border-b-2 ${
-                        activeTab === partTitle
-                          ? 'border-blue-600 text-blue-600'
-                          : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
-                      }`}
-                    >
-                      {partTitle}
-                      <span className="ml-2 text-xs bg-gray-200 px-2 py-1 rounded-full">
-                        {groupedLectures[partTitle].length}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 활성 탭의 강의 목록 */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {groupedLectures && groupedLectures[activeTab] && (
-                  <div className="space-y-2">
-                    {groupedLectures[activeTab].map((lecture, idx) => {
+            {/* 활성 탭의 강의 목록 */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              {groupedLectures && groupedLectures[activeTab] && (
+                <div className="space-y-2">
+                  {groupedLectures[activeTab].map((lecture, idx) => {
                       const lectureId = lecture.lecture_id!;
                       const currentStatus = localCompletionStates[lectureId] !== undefined
                         ? localCompletionStates[lectureId]
@@ -283,17 +271,16 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
                   </div>
                 )}
 
-                {(!course.lectures || course.lectures.length === 0) && (
-                  <div className="text-center py-8 text-gray-500">
-                    강의 목록이 없습니다.
-                  </div>
-                )}
-              </div>
+              {(!course.lectures || course.lectures.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  강의 목록이 없습니다.
+                </div>
+              )}
             </div>
 
             {/* 저장/취소 버튼 */}
-            <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
-              <div className="text-sm text-gray-600">
+            <div className="p-4 md:p-6 border-t bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 flex-shrink-0">
+              <div className="text-xs md:text-sm text-gray-600">
                 {changedLectures.size > 0 ? (
                   <span className="text-yellow-600 font-medium">
                     {changedLectures.size}개의 강의가 변경되었습니다.
@@ -302,18 +289,18 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate }: Cours
                   <span>변경사항이 없습니다.</span>
                 )}
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 md:gap-3 w-full sm:w-auto">
                 <button
                   onClick={handleCancel}
                   disabled={saving || changedLectures.size === 0}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 sm:flex-none px-4 py-2 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || changedLectures.size === 0}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="flex-1 sm:flex-none px-6 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {saving ? (
                     <>

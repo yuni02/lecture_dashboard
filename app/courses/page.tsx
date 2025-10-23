@@ -11,9 +11,16 @@ export default function CoursesPage() {
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState<number | null>(null);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     fetchCourses();
+    // localStorage에서 설정 불러오기
+    const savedHideCompleted = localStorage.getItem('hideCompletedLectures');
+    if (savedHideCompleted !== null) {
+      setHideCompleted(savedHideCompleted === 'true');
+    }
   }, []);
 
   const fetchCourses = async () => {
@@ -59,6 +66,12 @@ export default function CoursesPage() {
     } finally {
       setUpdatingVisibility(null);
     }
+  };
+
+  const toggleHideCompleted = () => {
+    const newValue = !hideCompleted;
+    setHideCompleted(newValue);
+    localStorage.setItem('hideCompletedLectures', String(newValue));
   };
 
   const visibleCourses = courses.filter(c => c.is_visible_on_dashboard);
@@ -142,7 +155,52 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-800">강의 목록</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-800">강의 목록</h1>
+
+        {/* 설정 버튼 */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="설정"
+          >
+            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+
+          {/* 설정 드롭다운 */}
+          {showSettings && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowSettings(false)}
+              />
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-20 p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">표시 설정</h3>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hideCompleted}
+                    onChange={toggleHideCompleted}
+                    className="mt-0.5 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">
+                      완료된 강의 숨기기
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      강의 상세 모달에서 체크된 강의를 숨깁니다
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* 대시보드 표시 강의 */}
       <div>
@@ -193,6 +251,7 @@ export default function CoursesPage() {
           courseId={selectedCourseId}
           onClose={() => setSelectedCourseId(null)}
           onUpdate={fetchCourses}
+          hideCompleted={hideCompleted}
         />
       )}
     </div>

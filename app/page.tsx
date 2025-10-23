@@ -74,8 +74,8 @@ export default function Home() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="mb-4">
+      <div className="space-y-4">
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
           <input
             type="text"
             placeholder="강의명 또는 강의 내용으로 검색..."
@@ -85,78 +85,146 @@ export default function Home() {
           />
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  강의명
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  진도율
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  학습 시간
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  남은 시간
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  상태
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredCourses.map((course) => (
-                <tr key={course.course_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <a
-                      href={course.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      {course.course_title}
-                    </a>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${course.progress_rate}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-gray-700">
-                        {course.progress_rate}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
-                    {formatTime(course.study_time)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">
-                    {formatTime(course.remaining_time)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {course.is_manually_completed ? (
-                      <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded">
-                        제외
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded">
-                        진행중
-                      </span>
-                    )}
-                  </td>
+        {/* 데스크톱: 테이블 뷰 */}
+        <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    강의명
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    진도율
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    학습 시간
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    남은 시간
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    상태
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredCourses.map((course) => (
+                  <tr key={course.course_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <a
+                        href={course.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        {course.course_title}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2 mr-2 max-w-[100px]">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ width: `${course.progress_rate}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                          {course.progress_rate}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      {formatTime(course.study_time)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                      {formatTime(course.remaining_time)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {course.is_manually_completed ? (
+                        <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded whitespace-nowrap">
+                          제외
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded whitespace-nowrap">
+                          진행중
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 모바일/태블릿: 카드 뷰 */}
+        <div className="lg:hidden space-y-4">
+          {filteredCourses.map((course) => (
+            <div
+              key={course.course_id}
+              className="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <a
+                href={course.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-4 md:p-6"
+              >
+                {/* 강의명과 상태 */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <h3 className="text-base md:text-lg font-semibold text-blue-600 hover:underline flex-1">
+                    {course.course_title}
+                  </h3>
+                  {course.is_manually_completed ? (
+                    <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded whitespace-nowrap flex-shrink-0">
+                      제외
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded whitespace-nowrap flex-shrink-0">
+                      진행중
+                    </span>
+                  )}
+                </div>
+
+                {/* 진도율 */}
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">진도율</span>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {course.progress_rate}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all"
+                      style={{ width: `${course.progress_rate}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* 시간 정보 */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-600 mb-1">학습 시간</div>
+                    <div className="font-semibold text-gray-800">
+                      {formatTime(course.study_time)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 mb-1">남은 시간</div>
+                    <div className="font-semibold text-gray-800">
+                      {formatTime(course.remaining_time)}
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          ))}
         </div>
 
         {filteredCourses.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
             검색 결과가 없습니다.
           </div>
         )}
