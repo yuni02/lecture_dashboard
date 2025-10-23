@@ -41,7 +41,7 @@ jobs:
             --exclude='deploy.sh' \
             --exclude='deploy-docker.sh' \
             --exclude='server-config.sh' \
-            app/ backend/ components/ lib/ public/ types/ \
+            app/ components/ lib/ public/ types/ \
             package.json package-lock.json \
             next.config.ts tsconfig.json \
             postcss.config.mjs eslint.config.mjs \
