@@ -36,11 +36,6 @@ export async function GET() {
           ORDER BY course_id, sort_order
         `, [courseIds]);
 
-        interface LectureInfo {
-          section_title: string;
-          lecture_title: string;
-        }
-
         interface TimeStats {
           total_lecture_time: number;
           study_time: number;
@@ -48,7 +43,7 @@ export async function GET() {
           total_count: number;
         }
 
-        const lecturesByCourse: Record<number, LectureInfo[]> = {};
+        const lecturesByCourse: Record<number, Lecture[]> = {};
         const timeStatsByCourse: Record<number, TimeStats> = {};
 
         lectures.forEach((lecture: RowDataPacket) => {
@@ -60,6 +55,8 @@ export async function GET() {
           lecturesByCourse[courseId].push({
             section_title: lecture.section_title as string,
             lecture_title: lecture.lecture_title as string,
+            lecture_time: parseFloat((lecture.lecture_time as string) || '0'),
+            is_completed: Boolean(lecture.is_completed),
           });
 
           if (!timeStatsByCourse[courseId]) {
