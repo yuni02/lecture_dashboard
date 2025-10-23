@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  lecture_dashboard:
+    container_name: lecture_dashboard
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_HOST=${DATABASE_HOST:-localhost}
+      - DATABASE_USER=${DATABASE_USER:-root}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME:-fastcampus_db}
+    env_file:
+      - .env.dev
+    restart: unless-stopped
+    networks:
+      - dashboard_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  dashboard_network:
+    driver: bridge

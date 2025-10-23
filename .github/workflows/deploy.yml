@@ -27,6 +27,9 @@ jobs:
       - name: Create deployment archive
         run: |
           tar -czf lecture_dashboard.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='out' \
             --exclude='venv' \
             --exclude='.git' \
             --exclude='__pycache__' \
@@ -34,10 +37,15 @@ jobs:
             --exclude='.claude' \
             --exclude='*.pyc' \
             --exclude='.env*' \
+            --exclude='*.sql' \
             --exclude='deploy.sh' \
             --exclude='deploy-docker.sh' \
             --exclude='server-config.sh' \
-            backend/ frontend/ Dockerfile docker-compose.yml .dockerignore
+            app/ backend/ components/ lib/ public/ types/ \
+            package.json package-lock.json \
+            next.config.ts tsconfig.json \
+            postcss.config.mjs eslint.config.mjs \
+            Dockerfile docker-compose.yml .dockerignore
 
       - name: Upload to server
         run: |
@@ -86,5 +94,5 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo "🌐 배포 완료: http://${{ secrets.SERVER_HOST }}:8000"
+          echo "🌐 배포 완료: http://${{ secrets.SERVER_HOST }}:3000"
           echo "📝 로그 확인: ssh -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'docker logs -f lecture_dashboard'"
