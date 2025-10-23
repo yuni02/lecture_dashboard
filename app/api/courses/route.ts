@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import type { Course } from '@/types';
+import type {Course, Lecture} from '@/types';
 import { RowDataPacket } from 'mysql2';
 
 export async function GET() {
