@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { Course, Lecture } from '@/types';
+import PasswordModal from './PasswordModal';
+import { authenticatedFetch, storePassword } from '@/lib/auth-client';
 
 interface CourseDetailModalProps {
   courseId: number;
@@ -17,6 +19,8 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
   const [changedLectures, setChangedLectures] = useState<Set<number>>(new Set());
   const [localCompletionStates, setLocalCompletionStates] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<string>('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingPassword, setPendingPassword] = useState<string | null>(null);
 
   const fetchCourseDetail = useCallback(async () => {
     try {
@@ -82,6 +86,23 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
       return;
     }
 
+    // 비밀번호 모달 표시
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordConfirm = async (password: string) => {
+    setShowPasswordModal(false);
+    setPendingPassword(password);
+    storePassword(password);
+
+    await performSave(password);
+  };
+
+  const handlePasswordCancel = () => {
+    setShowPasswordModal(false);
+  };
+
+  const performSave = async (password: string) => {
     setSaving(true);
 
     try {
@@ -94,18 +115,23 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
 
         console.log(`Updating Lecture ${lectureId} to ${newStatus}`);
 
-        const res = await fetch(`/api/lectures/${lectureId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
+        const res = await authenticatedFetch(
+          `/api/lectures/${lectureId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              is_completed: newStatus,
+            }),
           },
-          body: JSON.stringify({
-            is_completed: newStatus,
-          }),
-        });
+          password
+        );
 
         if (!res.ok) {
-          throw new Error(`Failed to update lecture ${lectureId}`);
+          const errorData = await res.json();
+          throw new Error(errorData.error || `Failed to update lecture ${lectureId}`);
         }
 
         return res.json();
@@ -129,6 +155,21 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
       alert('저장되었습니다!');
     } catch (error) {
       console.error('저장 실패:', error);
+
+      if (error instanceof Error) {
+        if (error.message === 'UNAUTHORIZED') {
+          alert('비밀번호가 올바르지 않습니다. 다시 시도해주세요.');
+          // 비밀번호 재입력 유도
+          setShowPasswordModal(true);
+          return;
+        }
+        if (error.message === 'PASSWORD_REQUIRED') {
+          alert('비밀번호가 필요합니다.');
+          setShowPasswordModal(true);
+          return;
+        }
+      }
+
       alert('저장에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setSaving(false);
@@ -167,11 +208,12 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
   }, {});
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div
+          className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* 헤더 */}
         <div className="bg-gray-800 text-white p-4 md:p-6 flex justify-between items-start flex-shrink-0">
           <div className="flex-1 min-w-0">
@@ -319,7 +361,14 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
             강의 정보를 불러올 수 없습니다.
           </div>
         )}
+        </div>
       </div>
-    </div>
+
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onConfirm={handlePasswordConfirm}
+        onCancel={handlePasswordCancel}
+      />
+    </>
   );
 }

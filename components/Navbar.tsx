@@ -1,15 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useState } from 'react';
+import { logout, isLoggedIn } from '@/lib/auth-client';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const loggedIn = isLoggedIn();
 
   const isActive = (path: string) => pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   const navLinks = [
     { href: '/', label: '대시보드' },
@@ -44,7 +52,7 @@ export default function Navbar() {
           </Link>
 
           {/* 데스크톱 메뉴 */}
-          <div className="hidden md:flex space-x-4">
+          <div className="hidden md:flex items-center space-x-4">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -58,6 +66,14 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            {loggedIn && (
+              <button
+                onClick={handleLogout}
+                className="px-3 py-2 rounded-md transition-colors whitespace-nowrap bg-red-600 hover:bg-red-700 text-white"
+              >
+                로그아웃
+              </button>
+            )}
           </div>
 
           {/* 모바일 햄버거 버튼 */}
@@ -119,6 +135,17 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          {loggedIn && (
+            <button
+              onClick={() => {
+                handleLogout();
+                handleLinkClick();
+              }}
+              className="w-full text-left px-4 py-3 rounded-md transition-colors bg-red-600 hover:bg-red-700 text-white"
+            >
+              로그아웃
+            </button>
+          )}
         </div>
       </div>
     </nav>

@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { verifyAuthHeader } from '@/lib/auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 인증 확인
+  const isAuthenticated = await verifyAuthHeader(request);
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Invalid or missing password' },
+      { status: 401 }
+    );
+  }
+
   try {
     const { id } = await params;
     const courseId = parseInt(id);

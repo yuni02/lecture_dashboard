@@ -3,9 +3,13 @@
 import { useEffect, useState } from 'react';
 import Loading from '@/components/Loading';
 import CourseDetailModal from '@/components/CourseDetailModal';
+import PasswordModal from '@/components/PasswordModal';
 import type { Course } from '@/types';
+import { authenticatedFetch, storePassword, getUserSettings, storeUserSettings, isLoggedIn } from '@/lib/auth-client';
+import { useRouter } from 'next/navigation';
 
 export default function CoursesPage() {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
@@ -13,15 +17,24 @@ export default function CoursesPage() {
   const [updatingVisibility, setUpdatingVisibility] = useState<number | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingVisibilityUpdate, setPendingVisibilityUpdate] = useState<{
+    courseId: number;
+    currentStatus: boolean;
+  } | null>(null);
 
   useEffect(() => {
     fetchCourses();
-    // localStorage에서 설정 불러오기
-    const savedHideCompleted = localStorage.getItem('hideCompletedLectures');
-    if (savedHideCompleted !== null) {
-      setHideCompleted(savedHideCompleted === 'true');
-    }
+    loadUserSettings();
   }, []);
+
+  const loadUserSettings = () => {
+    // sessionStorage에서 설정 불러오기
+    const settings = getUserSettings();
+    if (settings) {
+      setHideCompleted(settings.hide_completed_lectures);
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -42,36 +55,116 @@ export default function CoursesPage() {
   };
 
   const toggleVisibility = async (courseId: number, currentStatus: boolean) => {
+    // 비밀번호 모달 표시
+    setPendingVisibilityUpdate({ courseId, currentStatus });
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordConfirm = async (password: string) => {
+    setShowPasswordModal(false);
+    storePassword(password);
+
+    if (pendingVisibilityUpdate) {
+      await performVisibilityUpdate(
+        pendingVisibilityUpdate.courseId,
+        pendingVisibilityUpdate.currentStatus,
+        password
+      );
+      setPendingVisibilityUpdate(null);
+    }
+  };
+
+  const handlePasswordCancel = () => {
+    setShowPasswordModal(false);
+    setPendingVisibilityUpdate(null);
+  };
+
+  const performVisibilityUpdate = async (
+    courseId: number,
+    currentStatus: boolean,
+    password: string
+  ) => {
     setUpdatingVisibility(courseId);
 
     try {
-      const res = await fetch(`/api/courses/${courseId}/visibility`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
+      const res = await authenticatedFetch(
+        `/api/courses/${courseId}/visibility`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            is_visible_on_dashboard: !currentStatus,
+          }),
         },
-        body: JSON.stringify({
-          is_visible_on_dashboard: !currentStatus,
-        }),
-      });
+        password
+      );
 
       if (!res.ok) {
-        throw new Error('Failed to update visibility');
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to update visibility');
       }
 
       await fetchCourses();
     } catch (error) {
       console.error('대시보드 표시 상태 업데이트 실패:', error);
+
+      if (error instanceof Error) {
+        if (error.message === 'UNAUTHORIZED') {
+          alert('비밀번호가 올바르지 않습니다. 다시 시도해주세요.');
+          setPendingVisibilityUpdate({ courseId, currentStatus });
+          setShowPasswordModal(true);
+          return;
+        }
+        if (error.message === 'PASSWORD_REQUIRED') {
+          alert('비밀번호가 필요합니다.');
+          setPendingVisibilityUpdate({ courseId, currentStatus });
+          setShowPasswordModal(true);
+          return;
+        }
+      }
+
       alert('업데이트에 실패했습니다.');
     } finally {
       setUpdatingVisibility(null);
     }
   };
 
-  const toggleHideCompleted = () => {
+  const toggleHideCompleted = async () => {
+    if (!isLoggedIn()) {
+      alert('로그인이 필요합니다.');
+      router.push('/login');
+      return;
+    }
+
     const newValue = !hideCompleted;
     setHideCompleted(newValue);
-    localStorage.setItem('hideCompletedLectures', String(newValue));
+
+    // DB에 저장
+    try {
+      const response = await authenticatedFetch('/api/auth/settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hide_completed_lectures: newValue,
+        }),
+      });
+
+      if (response.ok) {
+        // sessionStorage에도 업데이트
+        storeUserSettings({ hide_completed_lectures: newValue });
+      } else {
+        throw new Error('Failed to update settings');
+      }
+    } catch (error) {
+      console.error('설정 저장 실패:', error);
+      // 실패 시 원래 값으로 되돌리기
+      setHideCompleted(!newValue);
+      alert('설정 저장에 실패했습니다.');
+    }
   };
 
   const visibleCourses = courses.filter(c => c.is_visible_on_dashboard);
@@ -254,6 +347,12 @@ export default function CoursesPage() {
           hideCompleted={hideCompleted}
         />
       )}
+
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onConfirm={handlePasswordConfirm}
+        onCancel={handlePasswordCancel}
+      />
     </div>
   );
 }
