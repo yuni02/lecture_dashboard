@@ -3,14 +3,19 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { logout, isLoggedIn } from '@/lib/auth-client';
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const loggedIn = isLoggedIn();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  // 클라이언트에서만 로그인 상태 확인 (Hydration 에러 방지)
+  useEffect(() => {
+    setLoggedIn(isLoggedIn());
+  }, []);
 
   const isActive = (path: string) => pathname === path;
 

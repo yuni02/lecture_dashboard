@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import type { Course, Lecture } from '@/types';
 import PasswordModal from './PasswordModal';
 import { authenticatedFetch, storePassword } from '@/lib/auth-client';
+import CategoryPrioritySelector from './CategoryPrioritySelector';
 
 interface CourseDetailModalProps {
   courseId: number;
@@ -22,6 +23,13 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingPassword, setPendingPassword] = useState<string | null>(null);
 
+  // 카테고리 및 우선순위 상태
+  const [categoryDepth1, setCategoryDepth1] = useState<string>('');
+  const [categoryDepth2, setCategoryDepth2] = useState<string>('');
+  const [categoryDepth3, setCategoryDepth3] = useState<string>('');
+  const [priority, setPriority] = useState<number>(0);
+  const [categoryPriorityChanged, setCategoryPriorityChanged] = useState(false);
+
   const fetchCourseDetail = useCallback(async () => {
     try {
       const res = await fetch(`/api/courses/${courseId}`);
@@ -36,6 +44,13 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
       console.log('Full Data:', data);
 
       setCourse(data);
+
+      // 카테고리 및 우선순위 초기화
+      setCategoryDepth1(data.category_depth1 || '');
+      setCategoryDepth2(data.category_depth2 || '');
+      setCategoryDepth3(data.category_depth3 || '');
+      setPriority(data.priority || 0);
+      setCategoryPriorityChanged(false);
 
       // 첫 번째 Part를 기본 활성 탭으로 설정
       if (data.lectures && data.lectures.length > 0) {
@@ -81,8 +96,8 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
   };
 
   const handleSave = async () => {
-    if (changedLectures.size === 0) {
-      alert('변경된 강의가 없습니다.');
+    if (changedLectures.size === 0 && !categoryPriorityChanged) {
+      alert('변경된 내용이 없습니다.');
       return;
     }
 
@@ -108,22 +123,29 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
     try {
       console.log('=== Saving Changes ===');
       console.log('Changed Lectures:', Array.from(changedLectures));
+      console.log('Category/Priority Changed:', categoryPriorityChanged);
 
-      // 변경된 각 강의를 업데이트
-      const updatePromises = Array.from(changedLectures).map(async (lectureId) => {
-        const newStatus = localCompletionStates[lectureId];
-
-        console.log(`Updating Lecture ${lectureId} to ${newStatus}`);
+      // 1. 카테고리 및 우선순위 업데이트 (변경된 경우)
+      if (categoryPriorityChanged) {
+        console.log('Updating Category/Priority:', {
+          category_depth1: categoryDepth1,
+          category_depth2: categoryDepth2,
+          category_depth3: categoryDepth3,
+          priority,
+        });
 
         const res = await authenticatedFetch(
-          `/api/lectures/${lectureId}`,
+          `/api/courses/${courseId}`,
           {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              is_completed: newStatus,
+              category_depth1: categoryDepth1,
+              category_depth2: categoryDepth2,
+              category_depth3: categoryDepth3,
+              priority,
             }),
           },
           password
@@ -131,18 +153,49 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
 
         if (!res.ok) {
           const errorData = await res.json();
-          throw new Error(errorData.error || `Failed to update lecture ${lectureId}`);
+          throw new Error(errorData.error || 'Failed to update course metadata');
         }
 
-        return res.json();
-      });
+        console.log('Category/Priority Updated Successfully');
+      }
 
-      const results = await Promise.all(updatePromises);
-      console.log('All Updates Completed:', results);
+      // 2. 변경된 각 강의를 업데이트
+      if (changedLectures.size > 0) {
+        const updatePromises = Array.from(changedLectures).map(async (lectureId) => {
+          const newStatus = localCompletionStates[lectureId];
+
+          console.log(`Updating Lecture ${lectureId} to ${newStatus}`);
+
+          const res = await authenticatedFetch(
+            `/api/lectures/${lectureId}`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                is_completed: newStatus,
+              }),
+            },
+            password
+          );
+
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `Failed to update lecture ${lectureId}`);
+          }
+
+          return res.json();
+        });
+
+        const results = await Promise.all(updatePromises);
+        console.log('All Lecture Updates Completed:', results);
+      }
 
       // 상태 초기화
       setChangedLectures(new Set());
       setLocalCompletionStates({});
+      setCategoryPriorityChanged(false);
 
       // 강의 상세 정보 다시 불러오기 (통계 업데이트 포함)
       await fetchCourseDetail();
@@ -179,6 +232,15 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
   const handleCancel = () => {
     setChangedLectures(new Set());
     setLocalCompletionStates({});
+
+    // 카테고리/우선순위도 원래 값으로 되돌리기
+    if (course) {
+      setCategoryDepth1(course.category_depth1 || '');
+      setCategoryDepth2(course.category_depth2 || '');
+      setCategoryDepth3(course.category_depth3 || '');
+      setPriority(course.priority || 0);
+    }
+    setCategoryPriorityChanged(false);
   };
 
   const formatTime = (minutes: number) => {
@@ -243,6 +305,33 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
           </div>
         ) : course ? (
           <>
+            {/* 카테고리 및 우선순위 설정 */}
+            <div className="p-4 md:p-6 bg-gray-50 border-b flex-shrink-0">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">강의 카테고리 및 우선순위 설정</h3>
+              <CategoryPrioritySelector
+                categoryDepth1={categoryDepth1}
+                categoryDepth2={categoryDepth2}
+                categoryDepth3={categoryDepth3}
+                priority={priority}
+                onCategoryDepth1Change={(value) => {
+                  setCategoryDepth1(value);
+                  setCategoryPriorityChanged(true);
+                }}
+                onCategoryDepth2Change={(value) => {
+                  setCategoryDepth2(value);
+                  setCategoryPriorityChanged(true);
+                }}
+                onCategoryDepth3Change={(value) => {
+                  setCategoryDepth3(value);
+                  setCategoryPriorityChanged(true);
+                }}
+                onPriorityChange={(value) => {
+                  setPriority(value);
+                  setCategoryPriorityChanged(true);
+                }}
+              />
+            </div>
+
             {/* Part 탭 */}
             <div className="border-b overflow-x-auto flex-shrink-0">
               <div className="flex px-4 md:px-6 pt-4">
@@ -323,9 +412,11 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
             {/* 저장/취소 버튼 */}
             <div className="p-4 md:p-6 border-t bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 flex-shrink-0">
               <div className="text-xs md:text-sm text-gray-600">
-                {changedLectures.size > 0 ? (
+                {changedLectures.size > 0 || categoryPriorityChanged ? (
                   <span className="text-yellow-600 font-medium">
-                    {changedLectures.size}개의 강의가 변경되었습니다.
+                    {changedLectures.size > 0 && `${changedLectures.size}개의 강의가 변경됨`}
+                    {changedLectures.size > 0 && categoryPriorityChanged && ', '}
+                    {categoryPriorityChanged && '카테고리/우선순위 변경됨'}
                   </span>
                 ) : (
                   <span>변경사항이 없습니다.</span>
@@ -334,14 +425,14 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
               <div className="flex gap-2 md:gap-3 w-full sm:w-auto">
                 <button
                   onClick={handleCancel}
-                  disabled={saving || changedLectures.size === 0}
+                  disabled={saving || (changedLectures.size === 0 && !categoryPriorityChanged)}
                   className="flex-1 sm:flex-none px-4 py-2 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={saving || changedLectures.size === 0}
+                  disabled={saving || (changedLectures.size === 0 && !categoryPriorityChanged)}
                   className="flex-1 sm:flex-none px-6 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {saving ? (

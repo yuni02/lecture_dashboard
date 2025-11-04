@@ -1,33 +1,98 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import type {Course, Lecture} from '@/types';
+import type { Course } from '@/types';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q');
+
+    if (!query || query.trim().length === 0) {
+      return NextResponse.json([]);
+    }
+
+    const searchTerm = `%${query.trim()}%`;
     const connection = await pool.getConnection();
 
     try {
-      const [courses] = await connection.query<RowDataPacket[]>(`
-        SELECT
-          course_id,
-          course_title,
-          url,
-          created_at,
-          updated_at,
-          is_manually_completed,
-          is_visible_on_dashboard,
-          priority,
-          category_depth1,
-          category_depth2,
-          category_depth3
-        FROM courses
-        ORDER BY updated_at DESC
-      `);
+      // 1. course_title로 검색
+      const [courseResults] = await connection.query<RowDataPacket[]>(`
+        SELECT DISTINCT
+          c.course_id,
+          c.course_title,
+          c.url,
+          c.created_at,
+          c.updated_at,
+          c.is_manually_completed,
+          c.is_visible_on_dashboard,
+          c.priority,
+          c.category_depth1,
+          c.category_depth2,
+          c.category_depth3,
+          'course' as match_type
+        FROM courses c
+        WHERE c.course_title LIKE ?
+      `, [searchTerm]);
 
-      if (courses.length > 0) {
-        const courseIds = courses.map(c => c.course_id);
+      // 2. lecture_title로 검색하여 해당 course 찾기
+      const [lectureResults] = await connection.query<RowDataPacket[]>(`
+        SELECT DISTINCT
+          c.course_id,
+          c.course_title,
+          c.url,
+          c.created_at,
+          c.updated_at,
+          c.is_manually_completed,
+          c.is_visible_on_dashboard,
+          c.priority,
+          c.category_depth1,
+          c.category_depth2,
+          c.category_depth3,
+          'lecture' as match_type,
+          GROUP_CONCAT(DISTINCT l.lecture_title SEPARATOR '|||') as matched_lectures
+        FROM courses c
+        INNER JOIN lectures l ON c.course_id = l.course_id
+        WHERE l.lecture_title LIKE ?
+        GROUP BY c.course_id
+      `, [searchTerm]);
 
+      // 중복 제거를 위해 course_id 기준으로 합치기
+      const courseMap = new Map<number, any>();
+
+      // course_title 매치 결과 추가
+      courseResults.forEach((course: RowDataPacket) => {
+        courseMap.set(course.course_id as number, {
+          ...course,
+          matched_lectures: [],
+        });
+      });
+
+      // lecture_title 매치 결과 추가 (course가 이미 있으면 lecture 정보만 추가)
+      lectureResults.forEach((course: RowDataPacket) => {
+        const courseId = course.course_id as number;
+        const matchedLectures = course.matched_lectures
+          ? (course.matched_lectures as string).split('|||').filter(Boolean)
+          : [];
+
+        if (courseMap.has(courseId)) {
+          // 이미 course_title로 매치된 경우, lecture 정보만 추가
+          const existing = courseMap.get(courseId);
+          existing.matched_lectures = matchedLectures;
+          existing.match_type = 'both'; // course와 lecture 모두 매치
+        } else {
+          // lecture로만 매치된 경우
+          courseMap.set(courseId, {
+            ...course,
+            matched_lectures: matchedLectures,
+          });
+        }
+      });
+
+      // 각 강의의 lectures와 통계 정보 가져오기
+      const courseIds = Array.from(courseMap.keys());
+
+      if (courseIds.length > 0) {
         const [lectures] = await connection.query<RowDataPacket[]>(`
           SELECT
             course_id,
@@ -47,7 +112,7 @@ export async function GET() {
           total_count: number;
         }
 
-        const lecturesByCourse: Record<number, Lecture[]> = {};
+        const lecturesByCourse: Record<number, any[]> = {};
         const timeStatsByCourse: Record<number, TimeStats> = {};
 
         lectures.forEach((lecture: RowDataPacket) => {
@@ -82,7 +147,7 @@ export async function GET() {
           }
         });
 
-        const result: Course[] = courses.map((course: RowDataPacket) => {
+        const result: Course[] = Array.from(courseMap.values()).map((course: any) => {
           const courseId = course.course_id as number;
           const stats = timeStatsByCourse[courseId] || {
             total_lecture_time: 0,
@@ -123,9 +188,9 @@ export async function GET() {
       connection.release();
     }
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Search error:', error);
     return NextResponse.json(
-      { error: 'Database error', details: String(error) },
+      { error: 'Search error', details: String(error) },
       { status: 500 }
     );
   }

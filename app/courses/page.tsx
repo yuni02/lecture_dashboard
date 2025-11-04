@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Loading from '@/components/Loading';
 import CourseDetailModal from '@/components/CourseDetailModal';
 import PasswordModal from '@/components/PasswordModal';
+import PriorityBadge from '@/components/PriorityBadge';
 import type { Course } from '@/types';
 import { authenticatedFetch, storePassword, getUserSettings, storeUserSettings, isLoggedIn } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
@@ -22,6 +23,11 @@ export default function CoursesPage() {
     courseId: number;
     currentStatus: boolean;
   } | null>(null);
+  const [sortBy, setSortBy] = useState<'priority' | 'progress' | 'title'>('priority');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<Course[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchCourses();
@@ -45,6 +51,27 @@ export default function CoursesPage() {
       console.error('데이터 로드 실패:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const res = await fetch(`/api/courses/search?q=${encodeURIComponent(query.trim())}`);
+      const data = await res.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error('검색 실패:', error);
+      setSearchResults([]);
     }
   };
 
@@ -167,8 +194,44 @@ export default function CoursesPage() {
     }
   };
 
-  const visibleCourses = courses.filter(c => c.is_visible_on_dashboard);
-  const hiddenCourses = courses.filter(c => !c.is_visible_on_dashboard);
+  // 필터링 및 정렬
+  const getFilteredAndSortedCourses = (courseList: Course[]) => {
+    let filtered = [...courseList];
+
+    // 카테고리 필터링
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter(c => c.category_depth1 === filterCategory);
+    }
+
+    // 정렬
+    filtered.sort((a, b) => {
+      if (sortBy === 'priority') {
+        // 우선순위 높은 순 (내림차순)
+        return (b.priority || 0) - (a.priority || 0);
+      } else if (sortBy === 'progress') {
+        // 진도율 낮은 순 (오름차순)
+        return a.progress_rate - b.progress_rate;
+      } else {
+        // 제목 순 (가나다순)
+        return a.course_title.localeCompare(b.course_title);
+      }
+    });
+
+    return filtered;
+  };
+
+  // 검색 중이면 검색 결과 사용, 아니면 일반 강의 목록 사용
+  const displayCourses = isSearching && searchQuery ? searchResults : courses;
+
+  const visibleCourses = getFilteredAndSortedCourses(
+    displayCourses.filter(c => c.is_visible_on_dashboard)
+  );
+  const hiddenCourses = displayCourses.filter(c => !c.is_visible_on_dashboard);
+
+  // 카테고리 목록 추출 (중복 제거)
+  const availableCategories = Array.from(
+    new Set(courses.map(c => c.category_depth1).filter(Boolean))
+  ) as string[];
 
   if (loading) return <Loading />;
 
@@ -181,9 +244,29 @@ export default function CoursesPage() {
         onClick={() => setSelectedCourseId(course.course_id)}
         className="cursor-pointer"
       >
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          {course.course_title}
-        </h3>
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-lg font-semibold text-gray-800 flex-1">
+            {course.course_title}
+          </h3>
+          <PriorityBadge priority={course.priority} size="sm" />
+        </div>
+        {course.category_depth1 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+              {course.category_depth1}
+            </span>
+            {course.category_depth2 && (
+              <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                {course.category_depth2}
+              </span>
+            )}
+            {course.category_depth3 && (
+              <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+                {course.category_depth3}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="space-y-3 mt-4">
           <div>
@@ -248,15 +331,50 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-800">강의 목록</h1>
 
-        {/* 설정 버튼 */}
-        <div className="relative">
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="설정"
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* 검색바 */}
+          <div className="relative flex-1 md:flex-none md:w-80">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="강의 제목 또는 강의명 검색..."
+              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => handleSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* 설정 버튼 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="설정"
           >
             <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -292,15 +410,55 @@ export default function CoursesPage() {
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
 
+      {/* 검색 결과 안내 */}
+      {isSearching && searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            "<strong>{searchQuery}</strong>" 검색 결과: <strong>{visibleCourses.length + hiddenCourses.length}개</strong> 강의 발견
+            {visibleCourses.length + hiddenCourses.length === 0 && ' - 검색 결과가 없습니다.'}
+          </p>
+        </div>
+      )}
+
       {/* 대시보드 표시 강의 */}
       <div>
-        <h2 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
-          <span>👁️ 대시보드 표시 강의</span>
-          <span className="text-sm font-normal text-gray-500">({visibleCourses.length}개)</span>
-        </h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h2 className="text-xl font-bold text-gray-700 flex items-center gap-2">
+            <span>👁️ 대시보드 표시 강의</span>
+            <span className="text-sm font-normal text-gray-500">({visibleCourses.length}개)</span>
+          </h2>
+
+          {/* 정렬 및 필터 */}
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'priority' | 'progress' | 'title')}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="priority">우선순위 순</option>
+              <option value="progress">진도율 순</option>
+              <option value="title">제목 순</option>
+            </select>
+
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">모든 카테고리</option>
+              {availableCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {visibleCourses.map((course) => renderCourseCard(course))}
         </div>

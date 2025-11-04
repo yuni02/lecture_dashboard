@@ -25,6 +25,10 @@ export interface Course {
   study_time: number;
   remaining_time: number;
   progress_rate: number;
+  priority?: number;
+  category_depth1?: string;
+  category_depth2?: string;
+  category_depth3?: string;
 }
 
 export interface TargetCourse extends Course {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import type { Course } from '@/types';
 import { RowDataPacket } from 'mysql2';
+import { verifyAuthHeader } from '@/lib/auth';
 
 export async function GET(
   request: Request,
@@ -28,7 +29,11 @@ export async function GET(
           url,
           created_at,
           updated_at,
-          is_manually_completed
+          is_manually_completed,
+          priority,
+          category_depth1,
+          category_depth2,
+          category_depth3
         FROM courses
         WHERE course_id = ?
       `, [courseId]);
@@ -105,9 +110,119 @@ export async function GET(
         study_time: studyTime,
         remaining_time: totalLectureTime - studyTime,
         progress_rate: progressRate,
+        priority: course.priority as number | undefined,
+        category_depth1: course.category_depth1 as string | undefined,
+        category_depth2: course.category_depth2 as string | undefined,
+        category_depth3: course.category_depth3 as string | undefined,
       };
 
       return NextResponse.json(result);
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Database error:', error);
+    return NextResponse.json(
+      { error: 'Database error', details: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // 인증 확인
+  const isAuthenticated = await verifyAuthHeader(request);
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Invalid or missing password' },
+      { status: 401 }
+    );
+  }
+
+  try {
+
+    const { id } = await params;
+    const courseId = parseInt(id);
+
+    if (isNaN(courseId)) {
+      return NextResponse.json(
+        { error: 'Invalid course ID' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const { priority, category_depth1, category_depth2, category_depth3 } = body;
+
+    // 유효성 검증
+    if (priority !== undefined && (typeof priority !== 'number' || priority < 0 || priority > 5)) {
+      return NextResponse.json(
+        { error: 'Priority must be a number between 0 and 5' },
+        { status: 400 }
+      );
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+      // 강의 존재 확인
+      const [courses] = await connection.query<RowDataPacket[]>(
+        'SELECT course_id FROM courses WHERE course_id = ?',
+        [courseId]
+      );
+
+      if (courses.length === 0) {
+        return NextResponse.json(
+          { error: 'Course not found' },
+          { status: 404 }
+        );
+      }
+
+      // 업데이트할 필드 동적 생성
+      const updates: string[] = [];
+      const values: any[] = [];
+
+      if (priority !== undefined) {
+        updates.push('priority = ?');
+        values.push(priority);
+      }
+
+      if (category_depth1 !== undefined) {
+        updates.push('category_depth1 = ?');
+        values.push(category_depth1 || null);
+      }
+
+      if (category_depth2 !== undefined) {
+        updates.push('category_depth2 = ?');
+        values.push(category_depth2 || null);
+      }
+
+      if (category_depth3 !== undefined) {
+        updates.push('category_depth3 = ?');
+        values.push(category_depth3 || null);
+      }
+
+      if (updates.length === 0) {
+        return NextResponse.json(
+          { error: 'No fields to update' },
+          { status: 400 }
+        );
+      }
+
+      // 업데이트 실행
+      values.push(courseId);
+      await connection.query(
+        `UPDATE courses SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE course_id = ?`,
+        values
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: 'Course updated successfully',
+      });
     } finally {
       connection.release();
     }
