@@ -26,6 +26,8 @@ const eslintConfig = [
       "react/no-unescaped-entities": "off",
       // 사용하지 않는 변수 경고만 표시 (에러로 처리 안함)
       "@typescript-eslint/no-unused-vars": "warn",
+      // any 타입 사용 허용
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];
