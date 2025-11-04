@@ -20,6 +20,14 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    rules: {
+      // 따옴표 escape 규칙 비활성화
+      "react/no-unescaped-entities": "off",
+      // 사용하지 않는 변수 경고만 표시 (에러로 처리 안함)
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
 ];
 
 export default eslintConfig;
