@@ -21,7 +21,6 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
   const [localCompletionStates, setLocalCompletionStates] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<string>('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [pendingPassword, setPendingPassword] = useState<string | null>(null);
 
   // 카테고리 및 우선순위 상태
   const [categoryDepth1, setCategoryDepth1] = useState<string>('');
@@ -107,7 +106,6 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
 
   const handlePasswordConfirm = async (password: string) => {
     setShowPasswordModal(false);
-    setPendingPassword(password);
     storePassword(password);
 
     await performSave(password);
@@ -241,12 +239,6 @@ export default function CourseDetailModal({ courseId, onClose, onUpdate, hideCom
       setPriority(course.priority || 0);
     }
     setCategoryPriorityChanged(false);
-  };
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return `${hours}시간 ${mins}분`;
   };
 
   // 섹션별로 강의 그룹화 및 필터링
