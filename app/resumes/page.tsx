@@ -1,8 +1,14 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Loading from '@/components/Loading';
-import ResumeViewer from '@/components/ResumeViewer';
+
+// ResumeViewer를 클라이언트에서만 로드 (react-pdf는 브라우저 전용)
+const ResumeViewer = dynamic(() => import('@/components/ResumeViewer'), {
+  ssr: false,
+  loading: () => <Loading />,
+});
 
 interface Resume {
   id: number;

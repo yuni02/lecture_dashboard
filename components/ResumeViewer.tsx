@@ -24,25 +24,25 @@ export default function ResumeViewer({ filePath, fileType, onClose }: ResumeView
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
 
   useEffect(() => {
+    const loadDocx = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(filePath);
+        const arrayBuffer = await response.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        setDocxContent(result.value);
+      } catch (error) {
+        console.error('DOCX 로딩 에러:', error);
+        setDocxContent('<p>문서를 로드하는 중 오류가 발생했습니다.</p>');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (fileType === 'docx') {
       loadDocx();
     }
   }, [filePath, fileType]);
-
-  const loadDocx = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(filePath);
-      const arrayBuffer = await response.arrayBuffer();
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      setDocxContent(result.value);
-    } catch (error) {
-      console.error('DOCX 로딩 에러:', error);
-      setDocxContent('<p>문서를 로드하는 중 오류가 발생했습니다.</p>');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
