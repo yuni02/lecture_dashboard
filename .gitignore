@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Server configuration (contains sensitive info)
 server-config.sh
+
+# Uploaded files
+/public/uploads/
