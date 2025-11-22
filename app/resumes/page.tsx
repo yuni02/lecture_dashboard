@@ -243,7 +243,7 @@ export default function ResumesPage() {
                     보기
                   </button>
                   <a
-                    href={resume.file_path}
+                    href={`/api/resumes/file/${resume.id}`}
                     download={resume.original_name}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
                   >
@@ -265,7 +265,7 @@ export default function ResumesPage() {
       {/* 파일 뷰어 모달 */}
       {selectedResume && (
         <ResumeViewer
-          filePath={selectedResume.file_path}
+          resumeId={selectedResume.id}
           fileType={selectedResume.file_type}
           onClose={() => setSelectedResume(null)}
         />

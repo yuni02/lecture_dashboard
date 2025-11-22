@@ -11,23 +11,24 @@ import 'react-pdf/dist/Page/TextLayer.css';
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface ResumeViewerProps {
-  filePath: string;
+  resumeId: number;
   fileType: string;
   onClose: () => void;
 }
 
-export default function ResumeViewer({ filePath, fileType, onClose }: ResumeViewerProps) {
+export default function ResumeViewer({ resumeId, fileType, onClose }: ResumeViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [docxContent, setDocxContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
+  const fileUrl = `/api/resumes/file/${resumeId}`;
 
   useEffect(() => {
     const loadDocx = async () => {
       try {
         setLoading(true);
-        const response = await fetch(filePath);
+        const response = await fetch(fileUrl);
         const arrayBuffer = await response.arrayBuffer();
         const result = await mammoth.convertToHtml({ arrayBuffer });
         setDocxContent(result.value);
@@ -42,7 +43,7 @@ export default function ResumeViewer({ filePath, fileType, onClose }: ResumeView
     if (fileType === 'docx') {
       loadDocx();
     }
-  }, [filePath, fileType]);
+  }, [fileUrl, fileType]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -89,7 +90,7 @@ export default function ResumeViewer({ filePath, fileType, onClose }: ResumeView
           {fileType === 'pdf' && (
             <div className="flex flex-col items-center">
               <Document
-                file={filePath}
+                file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadProgress={onDocumentLoadProgress}
                 loading={
@@ -156,7 +157,7 @@ export default function ResumeViewer({ filePath, fileType, onClose }: ResumeView
         {/* 하단 버튼 */}
         <div className="flex justify-end gap-2 p-4 border-t">
           <a
-            href={filePath}
+            href={fileUrl}
             download
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
