@@ -25,6 +25,7 @@ export default function ResumesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -122,6 +123,56 @@ export default function ResumesPage() {
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.size === resumes.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(resumes.map((r) => r.id)));
+    }
+  };
+
+  const handleSelectOne = (id: number) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) {
+      alert('삭제할 파일을 선택해주세요.');
+      return;
+    }
+
+    if (!confirm(`선택한 ${selectedIds.size}개의 파일을 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = Array.from(selectedIds).map((id) =>
+        fetch(`/api/resumes/${id}`, { method: 'DELETE' })
+      );
+
+      const results = await Promise.all(deletePromises);
+      const failedCount = results.filter((res) => !res.ok).length;
+
+      if (failedCount > 0) {
+        alert(`${failedCount}개의 파일 삭제에 실패했습니다.`);
+      } else {
+        alert('선택한 파일들이 삭제되었습니다.');
+      }
+
+      setSelectedIds(new Set());
+      await fetchResumes();
+    } catch (error) {
+      console.error('일괄 삭제 에러:', error);
+      alert('파일 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
@@ -206,60 +257,97 @@ export default function ResumesPage() {
           <p className="text-gray-500">업로드된 이력서가 없습니다.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {resumes.map((resume) => (
-            <div
-              key={resume.id}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {resume.original_name}
-                    </h3>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        resume.file_type === 'pdf'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {resume.file_type.toUpperCase()}
-                    </span>
-                  </div>
+        <>
+          {/* 선택 작업 버튼 */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === resumes.length && resumes.length > 0}
+                onChange={handleSelectAll}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                전체 선택 {selectedIds.size > 0 && `(${selectedIds.size}개 선택됨)`}
+              </span>
+            </div>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+              >
+                선택 삭제 ({selectedIds.size})
+              </button>
+            )}
+          </div>
 
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>파일 크기: {formatFileSize(resume.file_size)}</p>
-                    <p>업로드 일시: {formatDate(resume.uploaded_at)}</p>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 gap-4">
+            {resumes.map((resume) => (
+              <div
+                key={resume.id}
+                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+              >
+                <div className="flex items-start gap-4">
+                  {/* 체크박스 */}
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(resume.id)}
+                    onChange={() => handleSelectOne(resume.id)}
+                    className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  />
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedResume(resume)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    보기
-                  </button>
-                  <a
-                    href={`/api/resumes/file/${resume.id}`}
-                    download={resume.original_name}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                  >
-                    다운로드
-                  </a>
-                  <button
-                    onClick={() => handleDelete(resume.id, resume.original_name)}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
-                  >
-                    삭제
-                  </button>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {resume.original_name}
+                          </h3>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              resume.file_type === 'pdf'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            {resume.file_type.toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>파일 크기: {formatFileSize(resume.file_size)}</p>
+                          <p>업로드 일시: {formatDate(resume.uploaded_at)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSelectedResume(resume)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          보기
+                        </button>
+                        <a
+                          href={`/api/resumes/file/${resume.id}`}
+                          download={resume.original_name}
+                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                        >
+                          다운로드
+                        </a>
+                        <button
+                          onClick={() => handleDelete(resume.id, resume.original_name)}
+                          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* 파일 뷰어 모달 */}
