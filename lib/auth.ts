@@ -43,7 +43,6 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
     return false;
   }
 }
-
 /**
  * Request에서 Authorization 헤더를 확인하는 함수
  */
