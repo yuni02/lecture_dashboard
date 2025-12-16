@@ -28,7 +28,10 @@
       "Bash(git pull origin main --allow-unrelated-histories --no-edit)",
       "Bash(git add .gitignore README.md)",
       "Bash(cat:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npm view:*)",
+      "Bash(npm audit:*)"
     ],
     "deny": [],
     "ask": []
