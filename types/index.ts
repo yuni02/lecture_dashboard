@@ -74,3 +74,50 @@ export interface CourseProgressHistory {
   study_time_minutes: number;
   cumulative_completed: number;
 }
+
+// Crawler API Types
+export type JobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+export interface SpiderInfo {
+  name: string;
+  description: string;
+}
+
+export interface CrawlRequest {
+  spider: string;
+  url?: string;
+  course_ids?: string[];
+  output_file?: string;
+}
+
+export interface CrawlResponse {
+  job_id: string;
+  status: JobStatus;
+  message: string;
+  spider: string;
+  started_at: string;
+}
+
+export interface JobStatusResponse {
+  job_id: string;
+  status: JobStatus;
+  spider: string;
+  started_at: string;
+  finished_at?: string;
+  output?: string;
+  error?: string;
+  output_file?: string;
+}
+
+export interface JobListItem {
+  job_id: string;
+  status: JobStatus;
+  spider: string;
+  started_at: string;
+  finished_at?: string;
+}
+
+export interface JobListResponse {
+  jobs: JobListItem[];
+  total: number;
+}

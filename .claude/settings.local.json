@@ -31,7 +31,10 @@
       "Bash(npm run build:*)",
       "Bash(npm outdated:*)",
       "Bash(npm view:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

@@ -82,6 +82,16 @@ npm start
 
 ## API 엔드포인트
 
+### crawler 실행하는 방법
+
+1. FastAPI 서버 실행:
+   cd /Users/jennie/PycharmProjects/fastcampus-scrapping/course_scraper
+   uvicorn api.main:app --reload --port 8000
+
+2. Next.js 개발 서버 실행:
+   cd /Users/jennie/PycharmProjects/fastcampus-scrapping/web_dashboard
+   npm run dev
+
 ### Courses API
 
 - `GET /api/courses` - 모든 강의 목록 조회

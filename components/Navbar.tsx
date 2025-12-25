@@ -30,6 +30,7 @@ export default function Navbar() {
     { href: '/progress', label: '진척률 통계' },
     { href: '/target', label: '완강 목표' },
     { href: '/resumes', label: '이력서 관리' },
+    { href: '/crawler', label: '크롤러' },
   ];
 
   const handleLinkClick = () => {
