@@ -2,12 +2,18 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Loading from '@/components/Loading';
+import SortableTableHeader from '@/components/SortableTableHeader';
 import type { SpiderInfo, JobListItem, JobStatusResponse, CrawlResponse, JobStatus, Course } from '@/types';
 
 const CRAWLER_API_URL = process.env.NEXT_PUBLIC_CRAWLER_API_URL || 'http://localhost:8000';
 
 // 스파이더별 강의 선택 모드 정의
 type CourseSelectMode = 'none' | 'single' | 'multiple';
+
+// 정렬 타입
+type SortDirection = 'asc' | 'desc';
+type JobSortKey = 'job_id' | 'spider' | 'status' | 'started_at' | 'finished_at';
+type UpdateSortKey = 'course_title' | 'previous_progress' | 'current_progress' | 'progress_change' | 'study_time_change' | 'updated_at';
 
 const SPIDER_COURSE_MODE: Record<string, CourseSelectMode> = {
   'fastcampus': 'none',
@@ -81,7 +87,90 @@ export default function CrawlerPage() {
   const [courseSearchTerm, setCourseSearchTerm] = useState<string>('');
   const [showCourseSelector, setShowCourseSelector] = useState(false);
 
+  // 정렬 state
+  const [jobSortKey, setJobSortKey] = useState<JobSortKey>('started_at');
+  const [jobSortDirection, setJobSortDirection] = useState<SortDirection>('desc');
+  const [updateSortKey, setUpdateSortKey] = useState<UpdateSortKey>('updated_at');
+  const [updateSortDirection, setUpdateSortDirection] = useState<SortDirection>('desc');
+
   const courseSelectMode = SPIDER_COURSE_MODE[selectedSpider] || 'none';
+
+  // 정렬 핸들러
+  const handleJobSort = (key: string) => {
+    const newKey = key as JobSortKey;
+    if (jobSortKey === newKey) {
+      setJobSortDirection(jobSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setJobSortKey(newKey);
+      setJobSortDirection('asc');
+    }
+  };
+
+  const handleUpdateSort = (key: string) => {
+    const newKey = key as UpdateSortKey;
+    if (updateSortKey === newKey) {
+      setUpdateSortDirection(updateSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setUpdateSortKey(newKey);
+      setUpdateSortDirection('asc');
+    }
+  };
+
+  // 정렬된 jobs
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort((a, b) => {
+      let comparison = 0;
+      switch (jobSortKey) {
+        case 'job_id':
+          comparison = a.job_id.localeCompare(b.job_id);
+          break;
+        case 'spider':
+          comparison = a.spider.localeCompare(b.spider);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'started_at':
+          comparison = new Date(a.started_at).getTime() - new Date(b.started_at).getTime();
+          break;
+        case 'finished_at':
+          const aTime = a.finished_at ? new Date(a.finished_at).getTime() : 0;
+          const bTime = b.finished_at ? new Date(b.finished_at).getTime() : 0;
+          comparison = aTime - bTime;
+          break;
+      }
+      return jobSortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [jobs, jobSortKey, jobSortDirection]);
+
+  // 정렬된 updates
+  const sortedUpdates = useMemo(() => {
+    if (!historyData) return [];
+    return [...historyData.updates].sort((a, b) => {
+      let comparison = 0;
+      switch (updateSortKey) {
+        case 'course_title':
+          comparison = a.course_title.localeCompare(b.course_title);
+          break;
+        case 'previous_progress':
+          comparison = a.previous_progress - b.previous_progress;
+          break;
+        case 'current_progress':
+          comparison = a.current_progress - b.current_progress;
+          break;
+        case 'progress_change':
+          comparison = a.progress_change - b.progress_change;
+          break;
+        case 'study_time_change':
+          comparison = a.study_time_change - b.study_time_change;
+          break;
+        case 'updated_at':
+          comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+          break;
+      }
+      return updateSortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [historyData, updateSortKey, updateSortDirection]);
 
   const fetchSpiders = useCallback(async () => {
     try {
@@ -294,9 +383,29 @@ export default function CrawlerPage() {
   };
 
   const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
+    const totalHours = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
-    return hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`;
+    const totalDays = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+
+    if (totalDays >= 365) {
+      const years = Math.floor(totalDays / 365);
+      const months = Math.floor((totalDays % 365) / 30);
+      const days = (totalDays % 365) % 30;
+      return `${years}년 ${months}개월 ${days}일`;
+    }
+
+    if (totalDays >= 30) {
+      const months = Math.floor(totalDays / 30);
+      const days = totalDays % 30;
+      return `${months}개월 ${days}일 ${hours}시간`;
+    }
+
+    if (totalDays >= 1) {
+      return `${totalDays}일 ${hours}시간 ${mins}분`;
+    }
+
+    return totalHours > 0 ? `${totalHours}시간 ${mins}분` : `${mins}분`;
   };
 
   const selectedCourseNames = useMemo(() => {
@@ -498,16 +607,51 @@ export default function CrawlerPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업 ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">스파이더</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">시작 시간</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">완료 시간</th>
+                      <SortableTableHeader
+                        label="작업 ID"
+                        sortKey="job_id"
+                        currentSortKey={jobSortKey}
+                        sortDirection={jobSortDirection}
+                        onSort={handleJobSort}
+                        className="px-4 py-3"
+                      />
+                      <SortableTableHeader
+                        label="스파이더"
+                        sortKey="spider"
+                        currentSortKey={jobSortKey}
+                        sortDirection={jobSortDirection}
+                        onSort={handleJobSort}
+                        className="px-4 py-3"
+                      />
+                      <SortableTableHeader
+                        label="상태"
+                        sortKey="status"
+                        currentSortKey={jobSortKey}
+                        sortDirection={jobSortDirection}
+                        onSort={handleJobSort}
+                        className="px-4 py-3"
+                      />
+                      <SortableTableHeader
+                        label="시작 시간"
+                        sortKey="started_at"
+                        currentSortKey={jobSortKey}
+                        sortDirection={jobSortDirection}
+                        onSort={handleJobSort}
+                        className="px-4 py-3"
+                      />
+                      <SortableTableHeader
+                        label="완료 시간"
+                        sortKey="finished_at"
+                        currentSortKey={jobSortKey}
+                        sortDirection={jobSortDirection}
+                        onSort={handleJobSort}
+                        className="px-4 py-3"
+                      />
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {jobs.map((job) => (
+                    {sortedJobs.map((job) => (
                       <tr key={job.job_id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm font-mono text-gray-800">{job.job_id}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{job.spider}</td>
@@ -591,16 +735,58 @@ export default function CrawlerPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">강의명</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이전 진도율</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">현재 진도율</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">변화</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">학습 시간 변화</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">업데이트 시간</th>
+                          <SortableTableHeader
+                            label="강의명"
+                            sortKey="course_title"
+                            currentSortKey={updateSortKey}
+                            sortDirection={updateSortDirection}
+                            onSort={handleUpdateSort}
+                            className="px-4 py-3"
+                          />
+                          <SortableTableHeader
+                            label="이전 진도율"
+                            sortKey="previous_progress"
+                            currentSortKey={updateSortKey}
+                            sortDirection={updateSortDirection}
+                            onSort={handleUpdateSort}
+                            className="px-4 py-3"
+                          />
+                          <SortableTableHeader
+                            label="현재 진도율"
+                            sortKey="current_progress"
+                            currentSortKey={updateSortKey}
+                            sortDirection={updateSortDirection}
+                            onSort={handleUpdateSort}
+                            className="px-4 py-3"
+                          />
+                          <SortableTableHeader
+                            label="변화"
+                            sortKey="progress_change"
+                            currentSortKey={updateSortKey}
+                            sortDirection={updateSortDirection}
+                            onSort={handleUpdateSort}
+                            className="px-4 py-3"
+                          />
+                          <SortableTableHeader
+                            label="학습 시간 변화"
+                            sortKey="study_time_change"
+                            currentSortKey={updateSortKey}
+                            sortDirection={updateSortDirection}
+                            onSort={handleUpdateSort}
+                            className="px-4 py-3"
+                          />
+                          <SortableTableHeader
+                            label="업데이트 시간"
+                            sortKey="updated_at"
+                            currentSortKey={updateSortKey}
+                            sortDirection={updateSortDirection}
+                            onSort={handleUpdateSort}
+                            className="px-4 py-3"
+                          />
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {historyData.updates.map((update) => (
+                        {sortedUpdates.map((update) => (
                           <tr key={update.course_id} className="hover:bg-gray-50">
                             <td className="px-4 py-3">
                               <a

@@ -43,9 +43,29 @@ export default function TargetPage() {
   };
 
   const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
+    const totalHours = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
-    return `${hours}시간 ${mins}분`;
+    const totalDays = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+
+    if (totalDays >= 365) {
+      const years = Math.floor(totalDays / 365);
+      const months = Math.floor((totalDays % 365) / 30);
+      const days = (totalDays % 365) % 30;
+      return `${years}년 ${months}개월 ${days}일`;
+    }
+
+    if (totalDays >= 30) {
+      const months = Math.floor(totalDays / 30);
+      const days = totalDays % 30;
+      return `${months}개월 ${days}일 ${hours}시간`;
+    }
+
+    if (totalDays >= 1) {
+      return `${totalDays}일 ${hours}시간 ${mins}분`;
+    }
+
+    return `${totalHours}시간 ${mins}분`;
   };
 
   const handleClearTarget = async () => {
