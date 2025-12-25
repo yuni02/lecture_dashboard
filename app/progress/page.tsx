@@ -50,6 +50,23 @@ export default function ProgressPage() {
     return `${totalHours}시간 ${mins}분`;
   };
 
+  const formatDays = (totalDays: number) => {
+    if (totalDays >= 365) {
+      const years = Math.floor(totalDays / 365);
+      const months = Math.floor((totalDays % 365) / 30);
+      const days = (totalDays % 365) % 30;
+      return `${years}년 ${months}개월 ${days}일`;
+    }
+
+    if (totalDays >= 30) {
+      const months = Math.floor(totalDays / 30);
+      const days = totalDays % 30;
+      return `${months}개월 ${days}일`;
+    }
+
+    return `${totalDays}일`;
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -66,29 +83,29 @@ export default function ProgressPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">완료 예상 일수</h2>
+            <h2 className="text-xl font-semibold mb-4">완료 예상 기간</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {estimate.days_1h_per_day}일
+                <div className="text-xl font-bold text-blue-600">
+                  {formatDays(estimate.days_1h_per_day)}
                 </div>
                 <div className="text-sm text-gray-600 mt-2">하루 1시간</div>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {estimate.days_2h_per_day}일
+                <div className="text-xl font-bold text-green-600">
+                  {formatDays(estimate.days_2h_per_day)}
                 </div>
                 <div className="text-sm text-gray-600 mt-2">하루 2시간</div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {estimate.days_3h_per_day}일
+                <div className="text-xl font-bold text-purple-600">
+                  {formatDays(estimate.days_3h_per_day)}
                 </div>
                 <div className="text-sm text-gray-600 mt-2">하루 3시간</div>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">
-                  {estimate.days_5h_per_day}일
+                <div className="text-xl font-bold text-orange-600">
+                  {formatDays(estimate.days_5h_per_day)}
                 </div>
                 <div className="text-sm text-gray-600 mt-2">하루 5시간</div>
               </div>
