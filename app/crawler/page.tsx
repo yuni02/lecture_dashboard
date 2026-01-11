@@ -186,6 +186,7 @@ export default function CrawlerPage() {
   const fetchJobs = useCallback(async () => {
     try {
       const res = await fetch(`${CRAWLER_API_URL}/api/jobs`);
+      console.log('/jobs res>>', res)
       if (!res.ok) throw new Error('작업 목록을 불러오는데 실패했습니다');
       const data = await res.json();
       setJobs(data.jobs);

@@ -31,10 +31,8 @@ export async function GET() {
           FROM course_progress_snapshots
           WHERE snapshot_date < DATE(NOW())
         ) ps ON c.course_id = ps.course_id AND ps.rn = 1
-        WHERE c.is_visible_on_dashboard = 1
-          AND (c.progress_rate - COALESCE(ps.progress_rate, 0)) > 0
+        WHERE c.progress_rate - COALESCE(ps.progress_rate, 0) > 0
         ORDER BY (c.progress_rate - COALESCE(ps.progress_rate, 0)) DESC
-        LIMIT 5
       `);
 
       const result = topProgress.map((row: RowDataPacket) => ({
