@@ -5,7 +5,8 @@ import Loading from '@/components/Loading';
 import SortableTableHeader from '@/components/SortableTableHeader';
 import type { SpiderInfo, JobListItem, JobStatusResponse, CrawlResponse, JobStatus, Course } from '@/types';
 
-const CRAWLER_API_URL = process.env.NEXT_PUBLIC_CRAWLER_API_URL || 'http://localhost:8000';
+// 프록시를 통해 crawler API 호출 (보안상 서버 사이드에서만 실제 API 접근)
+const CRAWLER_API_URL = '/api/crawler';
 
 // 스파이더별 강의 선택 모드 정의
 type CourseSelectMode = 'none' | 'single' | 'multiple';
@@ -428,8 +429,7 @@ export default function CrawlerPage() {
               activeTab === 'crawl'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
+            }`}>
             크롤링 실행
           </button>
           <button

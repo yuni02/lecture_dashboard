@@ -14,12 +14,13 @@ services:
       - DATABASE_USER=${DATABASE_USER:-root}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - DATABASE_NAME=${DATABASE_NAME:-fastcampus_db}
-      - NEXT_PUBLIC_CRAWLER_API_URL=http://codeninjax.gonetis.com:8000
+      - CRAWLER_API_URL=http://course-crawler-api:8000
     env_file:
       - .env.dev
     restart: unless-stopped
     networks:
       - dashboard_network
+      - crawler_network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -30,3 +31,6 @@ services:
 networks:
   dashboard_network:
     driver: bridge
+  crawler_network:
+    external: true
+    name: course_scraper_default
