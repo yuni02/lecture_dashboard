@@ -37,7 +37,9 @@
       "Bash(curl:*)",
       "Bash(docker ps:*)",
       "Bash(docker network inspect:*)",
-      "Bash(docker network create:*)"
+      "Bash(docker network create:*)",
+      "Bash(sshpass:*)",
+      "Bash(brew install:*)"
     ],
     "deny": [],
     "ask": []

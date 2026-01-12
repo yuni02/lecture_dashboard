@@ -1,98 +1,46 @@
-name: Deploy to Server
+name: Deploy Web Dashboard
 
 on:
   push:
     branches:
-      - main  # main 브랜치에 push할 때 자동 배포
-  workflow_dispatch:  # 수동 실행도 가능
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add server to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Create deployment archive
-        run: |
-          tar -czf lecture_dashboard.tar.gz \
-            --exclude='node_modules' \
-            --exclude='.next' \
-            --exclude='out' \
-            --exclude='venv' \
-            --exclude='.git' \
-            --exclude='__pycache__' \
-            --exclude='.idea' \
-            --exclude='.claude' \
-            --exclude='*.pyc' \
-            --exclude='.env*' \
-            --exclude='*.sql' \
-            --exclude='deploy.sh' \
-            --exclude='deploy-docker.sh' \
-            --exclude='server-config.sh' \
-            app/ components/ lib/ public/ types/ \
-            package.json package-lock.json \
-            next.config.ts tsconfig.json \
-            postcss.config.mjs eslint.config.mjs \
-            Dockerfile docker-compose.yml .dockerignore
-
-      - name: Upload to server
-        run: |
-          scp -P ${{ secrets.SERVER_PORT }} \
-            lecture_dashboard.tar.gz \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/
-
-      - name: Deploy with Docker on server
-        run: |
-          ssh -p ${{ secrets.SERVER_PORT }} \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            set -e
-
-            # 배포 디렉토리 생성
-            mkdir -p ~/lecture_dashboard
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
             cd ~/lecture_dashboard
 
-            # 압축 해제
-            tar -xzf ~/lecture_dashboard.tar.gz
-            rm ~/lecture_dashboard.tar.gz
+            # 최신 코드 강제 동기화 (로컬 변경사항 무시)
+            git fetch origin main
+            git reset --hard origin/main
 
-            # Docker 설치 확인
-            if ! command -v docker &> /dev/null; then
-              echo "❌ Docker가 설치되어 있지 않습니다."
-              exit 1
-            fi
+            # .env.dev 파일 생성 (GitHub Secrets에서)
+            cat > .env.dev << 'EOF'
+            DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+            DATABASE_USER=${{ secrets.DATABASE_USER }}
+            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+            DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+            EOF
 
-            # 기존 컨테이너 중지 및 제거
-            echo "🔄 기존 컨테이너 중지 중..."
-            docker compose down 2>/dev/null || docker-compose down 2>/dev/null || true
+            # docker-compose.yml 네트워크 설정 (서버 환경에 맞게)
+            sed -i 's/name: course_scraper_default/name: fastcampus-cralwer_default/' docker-compose.yml 2>/dev/null || true
 
-            # Docker 이미지 빌드 및 컨테이너 시작
-            echo "🐳 Docker 이미지 빌드 및 컨테이너 시작 중..."
-            if command -v docker-compose &> /dev/null; then
-              docker-compose up -d --build
-            else
-              docker compose up -d --build
-            fi
+            # Docker 컨테이너 재빌드 및 실행
+            docker-compose down || true
+            docker-compose up -d --build
 
-            # 컨테이너 상태 확인
-            echo "📊 컨테이너 상태:"
-            docker ps | grep lecture_dashboard || echo "컨테이너를 찾을 수 없습니다"
+            # 정리 (오래된 이미지 삭제)
+            docker image prune -f
 
-            echo "✅ 배포 완료!"
-          ENDSSH
-
-      - name: Verify deployment
-        run: |
-          echo "🌐 배포 완료: http://${{ secrets.SERVER_HOST }}:3000"
-          echo "📝 로그 확인: ssh -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'docker logs -f lecture_dashboard'"
+            echo "Web Dashboard deployment completed!"
