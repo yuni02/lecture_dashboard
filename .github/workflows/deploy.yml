@@ -35,11 +35,17 @@ jobs:
 
             # docker-compose.yml 네트워크 설정 (서버 환경에 맞게)
             sed -i 's/name: course_scraper_default/name: fastcampus-cralwer_default/' docker-compose.yml 2>/dev/null || true
-            sed -i 's/name: db_mysql-network/name: db_mysql-network/' docker-compose.yml 2>/dev/null || true
+
+            # 외부 네트워크가 없으면 생성
+            docker network create fastcampus-cralwer_default 2>/dev/null || true
+            docker network create db_mysql-network 2>/dev/null || true
 
             # Docker 컨테이너 재빌드 및 실행
             docker-compose down || true
             docker-compose up -d --build
+
+            # MySQL 컨테이너를 mysql-network에 연결 (이미 연결되어 있으면 무시)
+            docker network connect db_mysql-network mysql-server 2>/dev/null || true
 
             # 정리 (오래된 이미지 삭제)
             docker image prune -f
