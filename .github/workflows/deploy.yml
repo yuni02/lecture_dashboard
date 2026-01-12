@@ -26,15 +26,16 @@ jobs:
             git reset --hard origin/main
 
             # .env.dev 파일 생성 (GitHub Secrets에서)
-            cat > .env.dev << 'EOF'
-            DATABASE_HOST=${{ secrets.DATABASE_HOST }}
-            DATABASE_USER=${{ secrets.DATABASE_USER }}
-            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
-            DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+            cat > .env.dev << EOF
+            MYSQL_HOST=${{ secrets.MYSQL_HOST }}
+            MYSQL_USER=${{ secrets.MYSQL_USER }}
+            MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+            MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
             EOF
 
             # docker-compose.yml 네트워크 설정 (서버 환경에 맞게)
             sed -i 's/name: course_scraper_default/name: fastcampus-cralwer_default/' docker-compose.yml 2>/dev/null || true
+            sed -i 's/name: db_mysql-network/name: db_mysql-network/' docker-compose.yml 2>/dev/null || true
 
             # Docker 컨테이너 재빌드 및 실행
             docker-compose down || true
