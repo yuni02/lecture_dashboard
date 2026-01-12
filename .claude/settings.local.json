@@ -34,7 +34,10 @@
       "Bash(npm audit:*)",
       "Bash(mkdir:*)",
       "Bash(ls:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker network inspect:*)",
+      "Bash(docker network create:*)"
     ],
     "deny": [],
     "ask": []

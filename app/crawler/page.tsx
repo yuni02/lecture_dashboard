@@ -480,7 +480,6 @@ export default function CrawlerPage() {
                   {courseSelectMode === 'multiple' && '이 스파이더는 여러 강의를 선택할 수 있습니다.'}
                 </p>
               </div>
-
               {courseSelectMode !== 'none' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
