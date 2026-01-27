@@ -27,6 +27,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+RUN apk add --no-cache su-exec
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -38,11 +39,12 @@ COPY --from=builder /app/.next/static ./.next/static
 RUN mkdir -p /app/public/uploads/resumes
 RUN chown -R nextjs:nodejs /app
 
-USER nextjs
+# entrypoint: 볼륨 마운트된 uploads 디렉토리 권한 보정 후 서버 시작
+COPY --chmod=755 entrypoint.sh /app/entrypoint.sh
 
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["/app/entrypoint.sh"]
