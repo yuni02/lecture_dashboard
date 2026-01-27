@@ -40,6 +40,10 @@ jobs:
             docker network create fastcampus-cralwer_default 2>/dev/null || true
             docker network create db_mysql-network 2>/dev/null || true
 
+            # 업로드 디렉토리 생성 및 권한 설정 (컨테이너 내 nextjs 유저 uid 1001)
+            mkdir -p ./uploads/resumes
+            chown -R 1001:1001 ./uploads
+
             # Docker 컨테이너 재빌드 및 실행
             docker-compose down || true
             docker-compose up -d --build
