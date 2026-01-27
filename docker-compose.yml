@@ -13,6 +13,8 @@ services:
       - CRAWLER_API_URL=http://course-crawler-api:8000
     env_file:
       - .env.dev
+    volumes:
+      - ./uploads:/app/public/uploads
     restart: unless-stopped
     networks:
       - dashboard_network
